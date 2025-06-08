@@ -9,12 +9,13 @@
 using namespace std;
 
 class Matrix;
-class Point;
+class Point4;
+class Vector4;
 
 Matrix createTranslationMatrix(double tx, double ty, double tz);
 Matrix createScalingMatrix(double sx, double sy, double sz);
 Matrix createRotationMatrix(double angle, double ax, double ay, double az);
-Point rotatePointRodrigues(const Point& p, const Point& axis, double angle);
+Vector4 rotateVectorRodrigues(const Vector4& v, const Vector4& axis, double angle);
 
 class Matrix {
 public:
@@ -51,6 +52,93 @@ public:
     }
 };
 
+class Vector4 {
+public:
+    double x, y, z, w;
+
+    Vector4() : x(0), y(0), z(0), w(0) {}
+    Vector4(double x, double y, double z, double w) : x(x), y(y), z(z), w(w) {}
+    Vector4(double x, double y, double z) : x(x), y(y), z(z), w(0) {} // Vector constructor
+
+    Vector4 operator*(const Matrix& matrix) const {
+        double x_new = matrix.values[0][0] * x + matrix.values[0][1] * y + matrix.values[0][2] * z + matrix.values[0][3] * w;
+        double y_new = matrix.values[1][0] * x + matrix.values[1][1] * y + matrix.values[1][2] * z + matrix.values[1][3] * w;
+        double z_new = matrix.values[2][0] * x + matrix.values[2][1] * y + matrix.values[2][2] * z + matrix.values[2][3] * w;
+        double w_new = matrix.values[3][0] * x + matrix.values[3][1] * y + matrix.values[3][2] * z + matrix.values[3][3] * w;
+        return Vector4(x_new, y_new, z_new, w_new);
+    }
+
+    Vector4 operator-(const Vector4& other) const {
+        return Vector4(x - other.x, y - other.y, z - other.z, w - other.w);
+    }
+
+    Vector4 cross(const Vector4& other) const {
+        return Vector4(
+            y * other.z - z * other.y,
+            z * other.x - x * other.z,
+            x * other.y - y * other.x,
+            0 // Cross product result is always a vector
+        );
+    }
+
+    double dot(const Vector4& other) const {
+        return x * other.x + y * other.y + z * other.z; // Don't include w for 3D dot product
+    }
+
+    double length() const {
+        return sqrt(x*x + y*y + z*z); // Don't include w for 3D length
+    }
+
+    void normalize() {
+        double len = length();
+        if (len != 0) {
+            x /= len;
+            y /= len;
+            z /= len;
+            // w remains unchanged for vectors (should be 0)
+        }
+    }
+};
+
+class Point4 {
+public:
+    double x, y, z, w;
+
+    Point4() : x(0), y(0), z(0), w(1) {}
+    Point4(double x, double y, double z) : x(x), y(y), z(z), w(1) {} // Point constructor
+    Point4(double x, double y, double z, double w) : x(x), y(y), z(z), w(w) {}
+
+    Point4 operator*(const Matrix& matrix) const {
+        double x_new = matrix.values[0][0] * x + matrix.values[0][1] * y + matrix.values[0][2] * z + matrix.values[0][3] * w;
+        double y_new = matrix.values[1][0] * x + matrix.values[1][1] * y + matrix.values[1][2] * z + matrix.values[1][3] * w;
+        double z_new = matrix.values[2][0] * x + matrix.values[2][1] * y + matrix.values[2][2] * z + matrix.values[2][3] * w;
+        double w_new = matrix.values[3][0] * x + matrix.values[3][1] * y + matrix.values[3][2] * z + matrix.values[3][3] * w;
+        
+        // Normalize if w != 1 (perspective division)
+        if (w_new != 1.0 && w_new != 0.0) {
+            x_new /= w_new;
+            y_new /= w_new;
+            z_new /= w_new;
+            w_new = 1.0;
+        }
+        
+        return Point4(x_new, y_new, z_new, w_new);
+    }
+
+    Vector4 operator-(const Point4& other) const {
+        return Vector4(x - other.x, y - other.y, z - other.z, 0); // Point - Point = Vector
+    }
+    
+    void writeToFile(ofstream& file) const {
+        file << fixed << setprecision(7) << x << " " << y << " " << z << endl;
+    }
+
+    void readFromFile(ifstream& file) {
+        file >> x >> y >> z;
+        w = 1.0; // Ensure it's a point
+    }
+};
+
 Matrix createTranslationMatrix(double tx, double ty, double tz) {
     Matrix matrix;
     matrix.values[0][3] = tx;
@@ -58,37 +146,6 @@ Matrix createTranslationMatrix(double tx, double ty, double tz) {
     matrix.values[2][3] = tz;
     return matrix;
 }
-
-class Point {
-public:
-    double x, y, z;
-
-    Point() : x(0), y(0), z(0) {}
-    Point(double x, double y, double z) : x(x), y(y), z(z) {}
-
-    Point transform(const Matrix& matrix) const {
-        double x_new = matrix.values[0][0] * x + matrix.values[0][1] * y + matrix.values[0][2] * z + matrix.values[0][3];
-        double y_new = matrix.values[1][0] * x + matrix.values[1][1] * y + matrix.values[1][2] * z + matrix.values[1][3];
-        double z_new = matrix.values[2][0] * x + matrix.values[2][1] * y + matrix.values[2][2] * z + matrix.values[2][3];
-        double w = matrix.values[3][0] * x + matrix.values[3][1] * y + matrix.values[3][2] * z + matrix.values[3][3];
-        
-        if (w != 1.0 && w != 0.0) {
-            x_new /= w;
-            y_new /= w;
-            z_new /= w;
-        }
-        
-        return Point(x_new, y_new, z_new);
-    }
-    
-    void writeToFile(ofstream& file) const {
-        file << x << " " << y << " " << z << endl;
-    }
-
-    void readFromFile(ifstream& file) {
-        file >> x >> y >> z;
-    }
-};
 
 Matrix createScalingMatrix(double sx, double sy, double sz) {
     Matrix matrix;
@@ -109,17 +166,17 @@ Matrix createRotationMatrix(double angle, double ax, double ay, double az) {
         az /= length;
     }
     
-    Point axis(ax, ay, az);
+    Vector4 axis(ax, ay, az, 0); // Use Vector4 for axis
     
-    // Define the standard unit vectors i, j, k
-    Point i(1.0, 0.0, 0.0);
-    Point j(0.0, 1.0, 0.0);
-    Point k(0.0, 0.0, 1.0);
+    // Define the standard unit vectors i, j, k as vectors
+    Vector4 i(1.0, 0.0, 0.0, 0);
+    Vector4 j(0.0, 1.0, 0.0, 0);
+    Vector4 k(0.0, 0.0, 1.0, 0);
     
     // Transform each unit vector using Rodrigues' formula
-    Point i_rotated = rotatePointRodrigues(i, axis, angle);
-    Point j_rotated = rotatePointRodrigues(j, axis, angle);
-    Point k_rotated = rotatePointRodrigues(k, axis, angle);
+    Vector4 i_rotated = rotateVectorRodrigues(i, axis, angle);
+    Vector4 j_rotated = rotateVectorRodrigues(j, axis, angle);
+    Vector4 k_rotated = rotateVectorRodrigues(k, axis, angle);
     
     // Build the rotation matrix from the transformed unit vectors
     // The first column is the transformed i vector
@@ -151,9 +208,8 @@ Matrix createRotationMatrix(double angle, double ax, double ay, double az) {
     return matrix;
 }
 
-
-// Helper function to rotate a point around an axis using Rodrigues' formula
-Point rotatePointRodrigues(const Point& p, const Point& axis, double angle) {
+// Helper function to rotate a vector around an axis using Rodrigues' formula
+Vector4 rotateVectorRodrigues(const Vector4& v, const Vector4& axis, double angle) {
     double rad = angle * M_PI / 180.0;
     double cosTheta = cos(rad);
     double sinTheta = sin(rad);
@@ -162,20 +218,17 @@ Point rotatePointRodrigues(const Point& p, const Point& axis, double angle) {
     // where k is the normalized rotation axis and v is the vector to rotate
     
     // k · v (dot product)
-    double dotProduct = axis.x * p.x + axis.y * p.y + axis.z * p.z;
+    double dotProduct = axis.dot(v);
     
     // k × v (cross product)
-    Point crossProduct(
-        axis.y * p.z - axis.z * p.y,
-        axis.z * p.x - axis.x * p.z,
-        axis.x * p.y - axis.y * p.x
-    );
+    Vector4 crossProduct = axis.cross(v);
     
     // Apply Rodrigues' formula
-    Point rotated(
-        p.x * cosTheta + crossProduct.x * sinTheta + axis.x * dotProduct * (1.0 - cosTheta),
-        p.y * cosTheta + crossProduct.y * sinTheta + axis.y * dotProduct * (1.0 - cosTheta),
-        p.z * cosTheta + crossProduct.z * sinTheta + axis.z * dotProduct * (1.0 - cosTheta)
+    Vector4 rotated(
+        v.x * cosTheta + crossProduct.x * sinTheta + axis.x * dotProduct * (1.0 - cosTheta),
+        v.y * cosTheta + crossProduct.y * sinTheta + axis.y * dotProduct * (1.0 - cosTheta),
+        v.z * cosTheta + crossProduct.z * sinTheta + axis.z * dotProduct * (1.0 - cosTheta),
+        0 // Result is a vector
     );
     
     return rotated;
@@ -183,7 +236,7 @@ Point rotatePointRodrigues(const Point& p, const Point& axis, double angle) {
 
 class Triangle {
 public:
-    Point p1, p2, p3;
+    Point4 p1, p2, p3;
     
     Triangle() {}
     
@@ -194,9 +247,9 @@ public:
     }
     
     void transform(const Matrix& matrix) {
-        p1 = p1.transform(matrix);
-        p2 = p2.transform(matrix);
-        p3 = p3.transform(matrix);
+        p1 = p1 * matrix; // Use matrix multiplication directly
+        p2 = p2 * matrix;
+        p3 = p3 * matrix;
     }
     
     void writeToFile(ofstream& file) const {
@@ -323,9 +376,10 @@ private:
         Triangle triangle;
         triangle.readFromFile(sceneFile);
         
-        Point p1_transformed = triangle.p1.transform(transformStack.getCurrentTransform());
-        Point p2_transformed = triangle.p2.transform(transformStack.getCurrentTransform());
-        Point p3_transformed = triangle.p3.transform(transformStack.getCurrentTransform());
+        // Transform each point using matrix multiplication
+        Point4 p1_transformed = triangle.p1 * transformStack.getCurrentTransform();
+        Point4 p2_transformed = triangle.p2 * transformStack.getCurrentTransform();
+        Point4 p3_transformed = triangle.p3 * transformStack.getCurrentTransform();
         
         p1_transformed.writeToFile(outputFile);
         p2_transformed.writeToFile(outputFile);
