@@ -9,10 +9,12 @@
 using namespace std;
 
 class Matrix;
+class Point;
 
 Matrix createTranslationMatrix(double tx, double ty, double tz);
 Matrix createScalingMatrix(double sx, double sy, double sz);
 Matrix createRotationMatrix(double angle, double ax, double ay, double az);
+Point rotatePointRodrigues(const Point& p, const Point& axis, double angle);
 
 class Matrix {
 public:
@@ -57,44 +59,6 @@ Matrix createTranslationMatrix(double tx, double ty, double tz) {
     return matrix;
 }
 
-Matrix createScalingMatrix(double sx, double sy, double sz) {
-    Matrix matrix;
-    matrix.values[0][0] = sx;
-    matrix.values[1][1] = sy;
-    matrix.values[2][2] = sz;
-    return matrix;
-}
-
-Matrix createRotationMatrix(double angle, double ax, double ay, double az) {
-    Matrix matrix;
-    
-    double length = sqrt(ax*ax + ay*ay + az*az);
-    if (length != 0) {
-        ax /= length;
-        ay /= length;
-        az /= length;
-    }
-    
-    double rad = angle * M_PI / 180.0;
-    double c = cos(rad);
-    double s = sin(rad);
-    double t = 1.0 - c;
-    
-    matrix.values[0][0] = t*ax*ax + c;
-    matrix.values[0][1] = t*ax*ay - s*az;
-    matrix.values[0][2] = t*ax*az + s*ay;
-    
-    matrix.values[1][0] = t*ax*ay + s*az;
-    matrix.values[1][1] = t*ay*ay + c;
-    matrix.values[1][2] = t*ay*az - s*ax;
-    
-    matrix.values[2][0] = t*ax*az - s*ay;
-    matrix.values[2][1] = t*ay*az + s*ax;
-    matrix.values[2][2] = t*az*az + c;
-    
-    return matrix;
-}
-
 class Point {
 public:
     double x, y, z;
@@ -125,6 +89,97 @@ public:
         file >> x >> y >> z;
     }
 };
+
+Matrix createScalingMatrix(double sx, double sy, double sz) {
+    Matrix matrix;
+    matrix.values[0][0] = sx;
+    matrix.values[1][1] = sy;
+    matrix.values[2][2] = sz;
+    return matrix;
+}
+
+Matrix createRotationMatrix(double angle, double ax, double ay, double az) {
+    Matrix matrix;
+    
+    // Normalize the rotation axis
+    double length = sqrt(ax*ax + ay*ay + az*az);
+    if (length != 0) {
+        ax /= length;
+        ay /= length;
+        az /= length;
+    }
+    
+    Point axis(ax, ay, az);
+    
+    // Define the standard unit vectors i, j, k
+    Point i(1.0, 0.0, 0.0);
+    Point j(0.0, 1.0, 0.0);
+    Point k(0.0, 0.0, 1.0);
+    
+    // Transform each unit vector using Rodrigues' formula
+    Point i_rotated = rotatePointRodrigues(i, axis, angle);
+    Point j_rotated = rotatePointRodrigues(j, axis, angle);
+    Point k_rotated = rotatePointRodrigues(k, axis, angle);
+    
+    // Build the rotation matrix from the transformed unit vectors
+    // The first column is the transformed i vector
+    matrix.values[0][0] = i_rotated.x;
+    matrix.values[1][0] = i_rotated.y;
+    matrix.values[2][0] = i_rotated.z;
+    
+    // The second column is the transformed j vector
+    matrix.values[0][1] = j_rotated.x;
+    matrix.values[1][1] = j_rotated.y;
+    matrix.values[2][1] = j_rotated.z;
+    
+    // The third column is the transformed k vector
+    matrix.values[0][2] = k_rotated.x;
+    matrix.values[1][2] = k_rotated.y;
+    matrix.values[2][2] = k_rotated.z;
+    
+    // The translation part remains zero for pure rotation
+    matrix.values[0][3] = 0.0;
+    matrix.values[1][3] = 0.0;
+    matrix.values[2][3] = 0.0;
+    
+    // Bottom row for homogeneous coordinates
+    matrix.values[3][0] = 0.0;
+    matrix.values[3][1] = 0.0;
+    matrix.values[3][2] = 0.0;
+    matrix.values[3][3] = 1.0;
+    
+    return matrix;
+}
+
+
+// Helper function to rotate a point around an axis using Rodrigues' formula
+Point rotatePointRodrigues(const Point& p, const Point& axis, double angle) {
+    double rad = angle * M_PI / 180.0;
+    double cosTheta = cos(rad);
+    double sinTheta = sin(rad);
+    
+    // v_rot = v*cos(θ) + (k × v)*sin(θ) + k*(k · v)*(1 - cos(θ))
+    // where k is the normalized rotation axis and v is the vector to rotate
+    
+    // k · v (dot product)
+    double dotProduct = axis.x * p.x + axis.y * p.y + axis.z * p.z;
+    
+    // k × v (cross product)
+    Point crossProduct(
+        axis.y * p.z - axis.z * p.y,
+        axis.z * p.x - axis.x * p.z,
+        axis.x * p.y - axis.y * p.x
+    );
+    
+    // Apply Rodrigues' formula
+    Point rotated(
+        p.x * cosTheta + crossProduct.x * sinTheta + axis.x * dotProduct * (1.0 - cosTheta),
+        p.y * cosTheta + crossProduct.y * sinTheta + axis.y * dotProduct * (1.0 - cosTheta),
+        p.z * cosTheta + crossProduct.z * sinTheta + axis.z * dotProduct * (1.0 - cosTheta)
+    );
+    
+    return rotated;
+}
 
 class Triangle {
 public:
@@ -297,8 +352,13 @@ private:
     }
 };
 
-int main() {
-    SceneProcessor processor("scene.txt", "stage1.txt");
+int main(int argc, char* argv[]) {
+    if (argc != 3) {
+        cerr << "Usage: " << argv[0] << " <input_scene_file> <output_stage1_file>" << endl;
+        return 1;
+    }
+    
+    SceneProcessor processor(argv[1], argv[2]);
     processor.processScene();
     return 0;
 }

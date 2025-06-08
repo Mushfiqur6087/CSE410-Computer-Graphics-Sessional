@@ -10,10 +10,56 @@
 using namespace std;
 
 class Matrix;
+class Point;
 
 Matrix createTranslationMatrix(double tx, double ty, double tz);
 Matrix createScalingMatrix(double sx, double sy, double sz);
 Matrix createRotationMatrix(double angle, double ax, double ay, double az);
+Point rotatePointRodrigues(const Point& p, const Point& axis, double angle);
+
+
+class Point {
+public:
+    double x, y, z;
+
+    Point() : x(0), y(0), z(0) {}
+    Point(double x, double y, double z) : x(x), y(y), z(z) {}
+
+    Point transform(const Matrix& matrix) const;
+    
+    void writeToFile(ofstream& file) const {
+        file << x << " " << y << " " << z << endl;
+    }
+
+    void readFromFile(ifstream& file) {
+        file >> x >> y >> z;
+    }
+    
+    Point operator-(const Point& other) const {
+        return Point(x - other.x, y - other.y, z - other.z);
+    }
+    
+    Point cross(const Point& other) const {
+        return Point(
+            y * other.z - z * other.y,
+            z * other.x - x * other.z,
+            x * other.y - y * other.x
+        );
+    }
+    
+    double length() const {
+        return sqrt(x*x + y*y + z*z);
+    }
+    
+    void normalize() {
+        double len = length();
+        if (len != 0) {
+            x /= len;
+            y /= len;
+            z /= len;
+        }
+    }
+};
 
 class Matrix {
 public:
@@ -50,6 +96,21 @@ public:
     }
 };
 
+Point Point::transform(const Matrix& matrix) const {
+    double x_new = matrix.values[0][0] * x + matrix.values[0][1] * y + matrix.values[0][2] * z + matrix.values[0][3];
+    double y_new = matrix.values[1][0] * x + matrix.values[1][1] * y + matrix.values[1][2] * z + matrix.values[1][3];
+    double z_new = matrix.values[2][0] * x + matrix.values[2][1] * y + matrix.values[2][2] * z + matrix.values[2][3];
+    double w = matrix.values[3][0] * x + matrix.values[3][1] * y + matrix.values[3][2] * z + matrix.values[3][3];
+    
+    if (w != 1.0 && w != 0.0) {
+        x_new /= w;
+        y_new /= w;
+        z_new /= w;
+    }
+    
+    return Point(x_new, y_new, z_new);
+}
+
 Matrix createTranslationMatrix(double tx, double ty, double tz) {
     Matrix matrix;
     matrix.values[0][3] = tx;
@@ -69,6 +130,7 @@ Matrix createScalingMatrix(double sx, double sy, double sz) {
 Matrix createRotationMatrix(double angle, double ax, double ay, double az) {
     Matrix matrix;
     
+    // Normalize the rotation axis
     double length = sqrt(ax*ax + ay*ay + az*az);
     if (length != 0) {
         ax /= length;
@@ -76,81 +138,77 @@ Matrix createRotationMatrix(double angle, double ax, double ay, double az) {
         az /= length;
     }
     
-    double rad = angle * M_PI / 180.0;
-    double c = cos(rad);
-    double s = sin(rad);
-    double t = 1.0 - c;
+    Point axis(ax, ay, az);
     
-    matrix.values[0][0] = t*ax*ax + c;
-    matrix.values[0][1] = t*ax*ay - s*az;
-    matrix.values[0][2] = t*ax*az + s*ay;
+    // Define the standard unit vectors i, j, k
+    Point i(1.0, 0.0, 0.0);
+    Point j(0.0, 1.0, 0.0);
+    Point k(0.0, 0.0, 1.0);
     
-    matrix.values[1][0] = t*ax*ay + s*az;
-    matrix.values[1][1] = t*ay*ay + c;
-    matrix.values[1][2] = t*ay*az - s*ax;
+    // Transform each unit vector using Rodrigues' formula
+    Point i_rotated = rotatePointRodrigues(i, axis, angle);
+    Point j_rotated = rotatePointRodrigues(j, axis, angle);
+    Point k_rotated = rotatePointRodrigues(k, axis, angle);
     
-    matrix.values[2][0] = t*ax*az - s*ay;
-    matrix.values[2][1] = t*ay*az + s*ax;
-    matrix.values[2][2] = t*az*az + c;
+    // Build the rotation matrix from the transformed unit vectors
+    // The first column is the transformed i vector
+    matrix.values[0][0] = i_rotated.x;
+    matrix.values[1][0] = i_rotated.y;
+    matrix.values[2][0] = i_rotated.z;
+    
+    // The second column is the transformed j vector
+    matrix.values[0][1] = j_rotated.x;
+    matrix.values[1][1] = j_rotated.y;
+    matrix.values[2][1] = j_rotated.z;
+    
+    // The third column is the transformed k vector
+    matrix.values[0][2] = k_rotated.x;
+    matrix.values[1][2] = k_rotated.y;
+    matrix.values[2][2] = k_rotated.z;
+    
+    // The translation part remains zero for pure rotation
+    matrix.values[0][3] = 0.0;
+    matrix.values[1][3] = 0.0;
+    matrix.values[2][3] = 0.0;
+    
+    // Bottom row for homogeneous coordinates
+    matrix.values[3][0] = 0.0;
+    matrix.values[3][1] = 0.0;
+    matrix.values[3][2] = 0.0;
+    matrix.values[3][3] = 1.0;
     
     return matrix;
 }
 
-class Point {
-public:
-    double x, y, z;
 
-    Point() : x(0), y(0), z(0) {}
-    Point(double x, double y, double z) : x(x), y(y), z(z) {}
-
-    Point transform(const Matrix& matrix) const {
-        double x_new = matrix.values[0][0] * x + matrix.values[0][1] * y + matrix.values[0][2] * z + matrix.values[0][3];
-        double y_new = matrix.values[1][0] * x + matrix.values[1][1] * y + matrix.values[1][2] * z + matrix.values[1][3];
-        double z_new = matrix.values[2][0] * x + matrix.values[2][1] * y + matrix.values[2][2] * z + matrix.values[2][3];
-        double w = matrix.values[3][0] * x + matrix.values[3][1] * y + matrix.values[3][2] * z + matrix.values[3][3];
-        
-        if (w != 1.0 && w != 0.0) {
-            x_new /= w;
-            y_new /= w;
-            z_new /= w;
-        }
-        
-        return Point(x_new, y_new, z_new);
-    }
+// Helper function to rotate a point around an axis using Rodrigues' formula
+Point rotatePointRodrigues(const Point& p, const Point& axis, double angle) {
+    double rad = angle * M_PI / 180.0;
+    double cosTheta = cos(rad);
+    double sinTheta = sin(rad);
     
-    void writeToFile(ofstream& file) const {
-        file << x << " " << y << " " << z << endl;
-    }
-
-    void readFromFile(ifstream& file) {
-        file >> x >> y >> z;
-    }
+    // v_rot = v*cos(θ) + (k × v)*sin(θ) + k*(k · v)*(1 - cos(θ))
+    // where k is the normalized rotation axis and v is the vector to rotate
     
-    Point operator-(const Point& other) const {
-        return Point(x - other.x, y - other.y, z - other.z);
-    }
+    // k · v (dot product)
+    double dotProduct = axis.x * p.x + axis.y * p.y + axis.z * p.z;
     
-    Point cross(const Point& other) const {
-        return Point(
-            y * other.z - z * other.y,
-            z * other.x - x * other.z,
-            x * other.y - y * other.x
-        );
-    }
+    // k × v (cross product)
+    Point crossProduct(
+        axis.y * p.z - axis.z * p.y,
+        axis.z * p.x - axis.x * p.z,
+        axis.x * p.y - axis.y * p.x
+    );
     
-    double length() const {
-        return sqrt(x*x + y*y + z*z);
-    }
+    // Apply Rodrigues' formula
+    Point rotated(
+        p.x * cosTheta + crossProduct.x * sinTheta + axis.x * dotProduct * (1.0 - cosTheta),
+        p.y * cosTheta + crossProduct.y * sinTheta + axis.y * dotProduct * (1.0 - cosTheta),
+        p.z * cosTheta + crossProduct.z * sinTheta + axis.z * dotProduct * (1.0 - cosTheta)
+    );
     
-    void normalize() {
-        double len = length();
-        if (len != 0) {
-            x /= len;
-            y /= len;
-            z /= len;
-        }
-    }
-};
+    return rotated;
+}
 
 class Triangle {
 public:
@@ -278,8 +336,13 @@ public:
     }
 };
 
-int main() {
-    ViewTransformer transformer("scene.txt", "stage1.txt", "stage2.txt");
+int main(int argc, char* argv[]) {
+    if (argc != 4) {
+        cerr << "Usage: " << argv[0] << " <scene_file> <input_stage1_file> <output_stage2_file>" << endl;
+        return 1;
+    }
+    
+    ViewTransformer transformer(argv[1], argv[2], argv[3]);
     transformer.transformPoints();
     return 0;
 }
