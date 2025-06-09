@@ -1,0 +1,33 @@
+# Compiled executables
+task1
+task2
+task3
+task4
+*.exe
+*.out
+
+# Generated output files
+my_z_buffer.txt
+my_output.bmp
+output.bmp
+z_buffer.txt
+
+# Test output files
+Test Cases/*/test*_my_output.bmp
+Test Cases/*/test*_z_buffer.txt
+Test Cases/*/my_stage*.txt
+
+# VS Code settings
+.vscode/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Object files
+*.o
+*.obj
+
+# Debug files
+*.dSYM/
+*.pdb
