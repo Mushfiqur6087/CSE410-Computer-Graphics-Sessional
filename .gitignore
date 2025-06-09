@@ -1,0 +1,30 @@
+# Compiled executables
+Offline2 - Rasterization/task1
+Offline2 - Rasterization/task2
+Offline2 - Rasterization/task3
+Offline2 - Rasterization/task4
+Offline2 - Rasterization/*.exe
+Offline2 - Rasterization/*.out
+
+# Generated output files
+Offline2 - Rasterization/my_z_buffer.txt
+Offline2 - Rasterization/my_output.bmp
+Offline2 - Rasterization/output.bmp
+Offline2 - Rasterization/z_buffer.txt
+
+# Test output files
+Offline2 - Rasterization/Test Cases/*/test*_my_output.bmp
+Offline2 - Rasterization/Test Cases/*/test*_z_buffer.txt
+Offline2 - Rasterization/Test Cases/*/my_stage*.txt
+
+# Temporary files
+*.tmp
+*.temp
+
+# Object files
+*.o
+*.obj
+
+# Debug files
+*.dSYM/
+*.pdb
