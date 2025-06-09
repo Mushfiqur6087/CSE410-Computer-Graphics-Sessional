@@ -17,6 +17,9 @@ Offline2 - Rasterization/Test Cases/*/test*_my_output.bmp
 Offline2 - Rasterization/Test Cases/*/test*_z_buffer.txt
 Offline2 - Rasterization/Test Cases/*/my_stage*.txt
 
+# VS Code settings
+.vscode/
+
 # Temporary files
 *.tmp
 *.temp

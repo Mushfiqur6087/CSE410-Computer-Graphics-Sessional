@@ -1,9 +1,0 @@
-{
-    "files.associations": {
-        "iosfwd": "cpp",
-        "charconv": "cpp",
-        "any": "cpp",
-        "bitset": "cpp",
-        "ostream": "cpp"
-    }
-}
