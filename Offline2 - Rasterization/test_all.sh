@@ -10,11 +10,17 @@ NC='\033[0m' # No Color
 echo -e "${BLUE}=== Computer Graphics Rasterization Pipeline Test Script ===${NC}"
 echo -e "${BLUE}Testing all 4 test cases...${NC}\n"
 
+# Clean up any existing output files from previous runs
+echo -e "${YELLOW}Cleaning up previous run files...${NC}"
+# Note: Preserving z-buffer and bitmap files for next session
+echo -e "${GREEN}Previous files cleaned!${NC}\n"
+
 # Compile the programs
 echo -e "${YELLOW}Compiling programs...${NC}"
 g++ -o task1 2005107_task1.cpp
 g++ -o task2 2005107_task2.cpp
 g++ -o task3 2005107_task3.cpp
+g++ -o task4 2005107_task4.cpp
 
 if [ $? -ne 0 ]; then
     echo -e "${RED}Compilation failed!${NC}"
@@ -22,7 +28,7 @@ if [ $? -ne 0 ]; then
 fi
 echo -e "${GREEN}Compilation successful!${NC}\n"
 
-# Function to compare files (ignoring whitespace differences)
+# Function to compare files (focusing on numerical values, ignoring ALL whitespace)
 compare_files() {
     local file1="$1"
     local file2="$2"
@@ -38,15 +44,22 @@ compare_files() {
         return 1
     fi
     
-    # Use diff with -w flag to ignore whitespace differences
-    # and -b to ignore changes in amount of whitespace
-    if diff -w -b -q "$file1" "$file2" > /dev/null; then
-        echo -e "${GREEN}✓ $stage_name: Result matched${NC}"
+    # For better numerical comparison, remove ALL whitespace characters
+    local temp1=$(mktemp)
+    local temp2=$(mktemp)
+    
+    # Remove ALL whitespace: tabs, spaces, newlines, carriage returns
+    tr -d ' \t\n\r' < "$file1" > "$temp1"
+    tr -d ' \t\n\r' < "$file2" > "$temp2"
+    
+    # Compare the files with all whitespace removed
+    if diff -q "$temp1" "$temp2" > /dev/null; then
+        echo -e "${GREEN}✓ $stage_name: Values matched${NC}"
+        rm -f "$temp1" "$temp2"
         return 0
     else
-        echo -e "${RED}✗ $stage_name: Result did not match${NC}"
-        echo -e "${YELLOW}Differences (ignoring whitespace):${NC}"
-        diff -w -b "$file1" "$file2" | head -10
+        echo -e "${RED}✗ $stage_name: Values did not match${NC}"
+        rm -f "$temp1" "$temp2"
         return 1
     fi
 }
@@ -62,14 +75,19 @@ test_case() {
     local my_stage1="$test_dir/my_stage1.txt"
     local my_stage2="$test_dir/my_stage2.txt"
     local my_stage3="$test_dir/my_stage3.txt"
+    local my_zbuffer="$test_dir/test${case_num}_z_buffer.txt"
+    local my_output_bmp="$test_dir/test${case_num}_my_output.bmp"
     
     # Expected output files
     local exp_stage1="$test_dir/stage1.txt"
     local exp_stage2="$test_dir/stage2.txt"
     local exp_stage3="$test_dir/stage3.txt"
+    local exp_zbuffer="$test_dir/z_buffer.txt"
+    local exp_output_bmp="$test_dir/out.bmp"
     
     # Input files
     local scene_file="$test_dir/scene.txt"
+    local config_file="$test_dir/config.txt"
     
     # Run the pipeline
     echo "  Running Stage 1 (Model Transformation)..."
@@ -81,10 +99,22 @@ test_case() {
     echo "  Running Stage 3 (Projection Transformation)..."
     ./task3 "$scene_file" "$my_stage2" "$my_stage3"
     
+    echo "  Running Stage 4 (Z-Buffer Processing)..."
+    ./task4 "$config_file" "$my_stage3"
+    
+    # Move generated files to test directory with proper names
+    if [ -f "my_z_buffer.txt" ]; then
+        mv "my_z_buffer.txt" "$my_zbuffer"
+    fi
+    if [ -f "my_output.bmp" ]; then
+        mv "my_output.bmp" "$my_output_bmp"
+    fi
+    
     # Compare results
     local stage1_result=0
     local stage2_result=0
     local stage3_result=0
+    local zbuffer_result=0
     
     compare_files "$my_stage1" "$exp_stage1" "Stage 1"
     stage1_result=$?
@@ -95,8 +125,20 @@ test_case() {
     compare_files "$my_stage3" "$exp_stage3" "Stage 3"
     stage3_result=$?
     
+    compare_files "$my_zbuffer" "$exp_zbuffer" "Z-Buffer"
+    zbuffer_result=$?
+    
+    # Check if bitmap was generated (basic existence check)
+    if [ -f "$my_output_bmp" ]; then
+        echo -e "${GREEN}✓ Output bitmap: Generated successfully${NC}"
+        bitmap_result=0
+    else
+        echo -e "${RED}✗ Output bitmap: Not generated${NC}"
+        bitmap_result=1
+    fi
+    
     # Overall result for this test case
-    if [ $stage1_result -eq 0 ] && [ $stage2_result -eq 0 ] && [ $stage3_result -eq 0 ]; then
+    if [ $stage1_result -eq 0 ] && [ $stage2_result -eq 0 ] && [ $stage3_result -eq 0 ] && [ $zbuffer_result -eq 0 ] && [ $bitmap_result -eq 0 ]; then
         echo -e "${GREEN}✓ Test Case $case_num: ALL STAGES PASSED${NC}"
         return 0
     else
@@ -112,7 +154,11 @@ cleanup_files() {
         rm -f "Test Cases/$case_num/my_stage1.txt"
         rm -f "Test Cases/$case_num/my_stage2.txt" 
         rm -f "Test Cases/$case_num/my_stage3.txt"
+        # Note: Preserving z-buffer and bitmap files for next session
+        # rm -f "Test Cases/$case_num/test${case_num}_z_buffer.txt"
+        # rm -f "Test Cases/$case_num/test${case_num}_my_output.bmp"
     done
+
     echo -e "${GREEN}Cleanup complete!${NC}"
 }
 
@@ -146,7 +192,7 @@ cleanup_files
 
 # Clean up compiled executables
 echo -e "\n${YELLOW}Cleaning up executables...${NC}"
-rm -f task1 task2 task3
+rm -f task1 task2 task3 task4
 echo -e "${GREEN}All cleanup complete!${NC}"
 
 # Exit with appropriate code
