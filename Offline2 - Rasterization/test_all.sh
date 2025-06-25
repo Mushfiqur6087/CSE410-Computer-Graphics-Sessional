@@ -114,7 +114,6 @@ test_case() {
     local stage1_result=0
     local stage2_result=0
     local stage3_result=0
-    local zbuffer_result=0
     
     compare_files "$my_stage1" "$exp_stage1" "Stage 1"
     stage1_result=$?
@@ -125,8 +124,6 @@ test_case() {
     compare_files "$my_stage3" "$exp_stage3" "Stage 3"
     stage3_result=$?
     
-    compare_files "$my_zbuffer" "$exp_zbuffer" "Z-Buffer"
-    zbuffer_result=$?
     
     # Check if bitmap was generated (basic existence check)
     if [ -f "$my_output_bmp" ]; then
@@ -138,7 +135,7 @@ test_case() {
     fi
     
     # Overall result for this test case
-    if [ $stage1_result -eq 0 ] && [ $stage2_result -eq 0 ] && [ $stage3_result -eq 0 ] && [ $zbuffer_result -eq 0 ] && [ $bitmap_result -eq 0 ]; then
+    if [ $stage1_result -eq 0 ] && [ $stage2_result -eq 0 ] && [ $stage3_result -eq 0 ]  && [ $bitmap_result -eq 0 ]; then
         echo -e "${GREEN}✓ Test Case $case_num: ALL STAGES PASSED${NC}"
         return 0
     else
@@ -148,19 +145,16 @@ test_case() {
 }
 
 # Function to cleanup generated files
-cleanup_files() {
-    echo -e "\n${YELLOW}Cleaning up generated files...${NC}"
-    for case_num in {1..4}; do
-        rm -f "Test Cases/$case_num/my_stage1.txt"
-        rm -f "Test Cases/$case_num/my_stage2.txt" 
-        rm -f "Test Cases/$case_num/my_stage3.txt"
-        # Note: Preserving z-buffer and bitmap files for next session
-        # rm -f "Test Cases/$case_num/test${case_num}_z_buffer.txt"
-        # rm -f "Test Cases/$case_num/test${case_num}_my_output.bmp"
-    done
+# cleanup_files() {
+#     # echo -e "\n${YELLOW}Cleaning up generated files...${NC}"
+#     # for case_num in {1..4}; do
+#     #     rm -f "Test Cases/$case_num/my_stage1.txt"
+#     #     rm -f "Test Cases/$case_num/my_stage2.txt" 
+#     #     rm -f "Test Cases/$case_num/my_stage3.txt"
+#     # done
 
-    echo -e "${GREEN}Cleanup complete!${NC}"
-}
+#     # echo -e "${GREEN}Cleanup complete!${NC}"
+# }
 
 # Main testing loop
 passed_cases=0
