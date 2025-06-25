@@ -1,0 +1,13 @@
+#!/bin/zsh
+
+# Compile camera.cpp with OpenGL and GLUT
+
+g++ camera.cpp -o camera -lGL -lGLU -lglut
+
+# If compilation succeeds, run the program
+if [[ $? -eq 0 ]]; then
+    ./camera
+    rm -f ./camera
+else
+    echo "Compilation failed."
+fi
