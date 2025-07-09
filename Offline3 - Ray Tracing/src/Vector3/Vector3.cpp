@@ -138,11 +138,12 @@ Vector3 Vector3::right() { return Vector3(1, 0, 0); }
 Vector3 Vector3::forward() { return Vector3(0, 0, -1); }
 Vector3 Vector3::backward() { return Vector3(0, 0, 1); }
 
-void Vector3::print() const {
-    std::cout << "Vector3(" << x << ", " << y << ", " << z << ")" << std::endl;
-}
-
 // Non-member operators
 Vector3 operator*(float scalar, const Vector3& vector) {
     return vector * scalar;
+}
+
+ostream &operator<<(ostream &out, const Vector3 &vector) {
+    out << "Vector3(" << vector.x << ", " << vector.y << ", " << vector.z << ")";
+    return out;
 }

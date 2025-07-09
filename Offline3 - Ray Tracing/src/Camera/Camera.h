@@ -2,6 +2,9 @@
 #define CAMERA_H
 
 #include "../Vector3/Vector3.h"
+#include <iostream>
+
+using namespace std;
 
 class Camera {
 private:
@@ -60,10 +63,12 @@ public:
     // Utility methods
     void reset();
     void update();
-    void print() const;
     
     // OpenGL specific methods
     void applyLookAt() const;
+    
+    // Friend function for output stream operator
+    friend ostream &operator<<(ostream &out, const Camera &camera);
 };
 
 #endif // CAMERA_H

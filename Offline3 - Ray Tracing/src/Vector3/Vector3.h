@@ -2,6 +2,9 @@
 #define VECTOR3_H
 
 #include <cmath>
+#include <iostream>
+
+using namespace std;
 
 class Vector3 {
 public:
@@ -49,8 +52,8 @@ public:
     static Vector3 forward();
     static Vector3 backward();
 
-    // Debug
-    void print() const;
+    // Friend function for output stream operator
+    friend ostream &operator<<(ostream &out, const Vector3 &vector);
 };
 
 // Non-member operators

@@ -162,16 +162,6 @@ void Camera::update() {
     updateBasisVectors();
 }
 
-void Camera::print() const {
-    std::cout << "Camera Status:" << std::endl;
-    std::cout << "Position: "; position.print();
-    std::cout << "Look Dir: "; lookDirection.print();
-    std::cout << "Up Dir:   "; upDirection.print();
-    std::cout << "Right Dir:"; rightDirection.print();
-    std::cout << "Movement Speed: " << movementSpeed << std::endl;
-    std::cout << "Rotation Speed: " << rotationSpeed << std::endl;
-}
-
 // OpenGL specific methods
 void Camera::applyLookAt() const {
     Vector3 target = position + lookDirection;
@@ -180,4 +170,15 @@ void Camera::applyLookAt() const {
         target.x, target.y, target.z,
         upDirection.x, upDirection.y, upDirection.z
     );
+}
+
+ostream &operator<<(ostream &out, const Camera &camera) {
+    out << "Camera Status:" << endl;
+    out << "Position: " << camera.position << endl;
+    out << "Look Dir: " << camera.lookDirection << endl;
+    out << "Up Dir:   " << camera.upDirection << endl;
+    out << "Right Dir:" << camera.rightDirection << endl;
+    out << "Movement Speed: " << camera.movementSpeed << endl;
+    out << "Rotation Speed: " << camera.rotationSpeed << endl;
+    return out;
 }
