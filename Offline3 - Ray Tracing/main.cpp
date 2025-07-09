@@ -1,284 +1,167 @@
-// #include <GL/glut.h>
-// #include <iostream>
-// #include "Vector3/Vector3.h"
-// #include "Camera/Camera.h"
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <string>
+#include <sstream>
+#include "src/Object/Object.h"
+#include "src/Sphere/Sphere.h"
+#include "src/Triangle/Triangle.h"
+#include "src/GeneralQuadratic/GeneralQuadratic.h"
+#include "src/PointLight/PointLight.h"
+#include "src/SpotLight/SpotLight.h"
+#include "src/Vector3/Vector3.h"
+#include "src/Color/Color.h"
+#include "globals.h"
 
-// // Global objects
-// Camera camera;
+using namespace std;
 
-// // Cube rendering variables
-// float cubeSize = 1.0f;
-// Vector3 cubePosition(0, 0, 0);
-// Vector3 cubeRotation(0, 0, 0);
-// bool wireframeMode = false;
+// Global vectors for objects and lights
+vector<Object*> objects;
+vector<PointLight> pointLights;
+vector<SpotLight> spotLights;
 
-// // Window dimensions
-// int windowWidth = 800;
-// int windowHeight = 600;
+// Global variables for scene configuration
+int recursionLevel;
+int imageWidth;
 
-// // Function declarations
-// void initializeOpenGL();
-// void display();
-// void reshape(int width, int height);
-// void specialKeys(int key, int x, int y);
-// void keyboard(unsigned char key, int x, int y);
-// void printControls();
-// void drawCube();
-// void drawCubeFace(const Vector3& v1, const Vector3& v2, const Vector3& v3, const Vector3& v4, 
-//                   float r, float g, float b);
+void loadData() {
+    ifstream file("Spec/scene.txt");
+    if (!file.is_open()) {
+        cerr << "Error: Could not open scene.txt" << endl;
+        return;
+    }
 
-// int main(int argc, char** argv) {
-//     // Initialize GLUT
-//     glutInit(&argc, argv);
-//     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
-//     glutInitWindowSize(windowWidth, windowHeight);
-//     glutCreateWindow("Refactored Cube Viewer with Camera System");
-    
-//     // Initialize OpenGL settings
-//     initializeOpenGL();
-    
-//     // Print control instructions
-//     printControls();
-    
-//     // Set up callback functions
-//     glutDisplayFunc(display);
-//     glutReshapeFunc(reshape);
-//     glutSpecialFunc(specialKeys);
-//     glutKeyboardFunc(keyboard);
-    
-//     // Start the main loop
-//     glutMainLoop();
-    
-//     return 0;
-// }
+    // Read recursion level and image width
+    file >> recursionLevel;
+    file >> imageWidth;
 
-// void initializeOpenGL() {
-//     // Enable depth testing
-//     glEnable(GL_DEPTH_TEST);
-    
-//     // Set background color to dark gray
-//     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-    
-//     // Enable face culling for better performance
-//     glEnable(GL_CULL_FACE);
-//     glCullFace(GL_BACK);
-    
-//     // Set initial camera position
-//     camera.setPosition(Vector3(0, 0, 10));
-//     camera.setLookDirection(Vector3(0, 0, -1));
-// }
+    // Read number of objects
+    int numObjects;
+    file >> numObjects;
 
-// void display() {
-//     // Clear the screen and depth buffer
-//     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    
-//     // Reset the modelview matrix
-//     glLoadIdentity();
-    
-//     // Apply camera transformation
-//     camera.applyLookAt();
-    
-//     // Draw the cube
-//     drawCube();
-    
-//     // Swap buffers for smooth animation
-//     glutSwapBuffers();
-// }
+    // Read objects
+    for (int i = 0; i < numObjects; i++) {
+        string objectType;
+        file >> objectType;
 
-// void reshape(int width, int height) {
-//     windowWidth = width;
-//     windowHeight = height;
-    
-//     // Prevent division by zero
-//     if (height == 0) height = 1;
-    
-//     // Calculate aspect ratio
-//     float aspectRatio = (float)width / (float)height;
-    
-//     // Set the viewport
-//     glViewport(0, 0, width, height);
-    
-//     // Set up the projection matrix
-//     glMatrixMode(GL_PROJECTION);
-//     glLoadIdentity();
-//     gluPerspective(60.0, aspectRatio, 0.1, 1000.0);
-    
-//     // Switch back to modelview matrix
-//     glMatrixMode(GL_MODELVIEW);
-// }
+        if (objectType == "sphere") {
+            // Read sphere data
+            Vector3 center;
+            double radius;
+            Color color;
+            double ambient, diffuse, specular, reflection;
+            int shine;
 
-// void specialKeys(int key, int x, int y) {
-//     switch(key) {
-//         case GLUT_KEY_UP:
-//             camera.moveForward();
-//             break;
-//         case GLUT_KEY_DOWN:
-//             camera.moveBackward();
-//             break;
-//         case GLUT_KEY_LEFT:
-//             camera.moveLeft();
-//             break;
-//         case GLUT_KEY_RIGHT:
-//             camera.moveRight();
-//             break;
-//         case GLUT_KEY_PAGE_UP:
-//             camera.moveUp();
-//             break;
-//         case GLUT_KEY_PAGE_DOWN:
-//             camera.moveDown();
-//             break;
-//     }
-//     // Redraw the scene
-//     glutPostRedisplay();
-// }
+            file >> center.x >> center.y >> center.z;
+            file >> radius;
+            file >> color.r >> color.g >> color.b;
+            file >> ambient >> diffuse >> specular >> reflection;
+            file >> shine;
 
-// void keyboard(unsigned char key, int x, int y) {
-//     switch(key) {
-//         // Camera rotation controls
-//         case '1':
-//             camera.lookLeft();
-//             break;
-//         case '2':
-//             camera.lookRight();
-//             break;
-//         case '3':
-//             camera.lookUp();
-//             break;
-//         case '4':
-//             camera.lookDown();
-//             break;
-//         case '5':
-//             camera.tiltClockwise();
-//             break;
-//         case '6':
-//             camera.tiltCounterClockwise();
-//             break;
-            
-//         // Reset and utility controls
-//         case 'c':
-//         case 'C':
-//             camera.reset();
-//             std::cout << "Camera reset" << std::endl;
-//             break;
-//         case 'p':
-//         case 'P':
-//             camera.print();
-//             break;
-//         case 'h':
-//         case 'H':
-//             printControls();
-//             break;
-            
-//         // Exit
-//         case 27: // ESC key
-//         case 'q':
-//         case 'Q':
-//             std::cout << "Exiting..." << std::endl;
-//             exit(0);
-//             break;
-//     }
-    
-//     // Redraw the scene
-//     glutPostRedisplay();
-// }
+            // Create sphere object
+            Object* temp = new Sphere(center, radius);
+            temp->setColor(color.r, color.g, color.b);
+            temp->setCoEfficients(ambient, diffuse, specular, reflection);
+            temp->setShine(shine);
+            objects.push_back(temp);
+        }
+        else if (objectType == "triangle") {
+            // Read triangle data
+            Vector3 v1, v2, v3;
+            Color color;
+            double ambient, diffuse, specular, reflection;
+            int shine;
 
-// void drawCubeFace(const Vector3& v1, const Vector3& v2, const Vector3& v3, const Vector3& v4,
-//                   float r, float g, float b) {
-//     glColor3f(r, g, b);
-//     glVertex3f(v1.x, v1.y, v1.z);
-//     glVertex3f(v2.x, v2.y, v2.z);
-//     glVertex3f(v3.x, v3.y, v3.z);
-//     glVertex3f(v4.x, v4.y, v4.z);
-// }
+            file >> v1.x >> v1.y >> v1.z;
+            file >> v2.x >> v2.y >> v2.z;
+            file >> v3.x >> v3.y >> v3.z;
+            file >> color.r >> color.g >> color.b;
+            file >> ambient >> diffuse >> specular >> reflection;
+            file >> shine;
 
-// void drawCube() {
-//     glPushMatrix();
-    
-//     // Apply cube transformations
-//     glTranslatef(cubePosition.x, cubePosition.y, cubePosition.z);
-//     glRotatef(cubeRotation.x, 1, 0, 0);
-//     glRotatef(cubeRotation.y, 0, 1, 0);
-//     glRotatef(cubeRotation.z, 0, 0, 1);
-    
-//     float s = cubeSize;
-    
-//     if (wireframeMode) {
-//         // Draw wireframe cube
-//         glColor3f(1, 1, 1); // White wireframe
-//         glBegin(GL_LINES);
-        
-//         // Bottom face
-//         glVertex3f(-s, -s, -s); glVertex3f( s, -s, -s);
-//         glVertex3f( s, -s, -s); glVertex3f( s, -s,  s);
-//         glVertex3f( s, -s,  s); glVertex3f(-s, -s,  s);
-//         glVertex3f(-s, -s,  s); glVertex3f(-s, -s, -s);
-        
-//         // Top face
-//         glVertex3f(-s,  s, -s); glVertex3f( s,  s, -s);
-//         glVertex3f( s,  s, -s); glVertex3f( s,  s,  s);
-//         glVertex3f( s,  s,  s); glVertex3f(-s,  s,  s);
-//         glVertex3f(-s,  s,  s); glVertex3f(-s,  s, -s);
-        
-//         // Vertical edges
-//         glVertex3f(-s, -s, -s); glVertex3f(-s,  s, -s);
-//         glVertex3f( s, -s, -s); glVertex3f( s,  s, -s);
-//         glVertex3f( s, -s,  s); glVertex3f( s,  s,  s);
-//         glVertex3f(-s, -s,  s); glVertex3f(-s,  s,  s);
-        
-//         glEnd();
-//     } else {
-//         // Draw solid colored cube
-//         glBegin(GL_QUADS);
-        
-//         // +Z face (blue)
-//         drawCubeFace(Vector3(-s, -s,  s), Vector3( s, -s,  s), 
-//                      Vector3( s,  s,  s), Vector3(-s,  s,  s), 0, 0, 1);
-        
-//         // -Z face (green)
-//         drawCubeFace(Vector3(-s, -s, -s), Vector3(-s,  s, -s), 
-//                      Vector3( s,  s, -s), Vector3( s, -s, -s), 0, 1, 0);
-        
-//         // -X face (red)
-//         drawCubeFace(Vector3(-s, -s, -s), Vector3(-s, -s,  s), 
-//                      Vector3(-s,  s,  s), Vector3(-s,  s, -s), 1, 0, 0);
-        
-//         // +X face (yellow)
-//         drawCubeFace(Vector3( s, -s, -s), Vector3( s,  s, -s), 
-//                      Vector3( s,  s,  s), Vector3( s, -s,  s), 1, 1, 0);
-        
-//         // +Y face (cyan)
-//         drawCubeFace(Vector3(-s,  s, -s), Vector3(-s,  s,  s), 
-//                      Vector3( s,  s,  s), Vector3( s,  s, -s), 0, 1, 1);
-        
-//         // -Y face (magenta)
-//         drawCubeFace(Vector3(-s, -s, -s), Vector3( s, -s, -s), 
-//                      Vector3( s, -s,  s), Vector3(-s, -s,  s), 1, 0, 1);
-        
-//         glEnd();
-//     }
-    
-//     glPopMatrix();
-// }
+            // Create triangle object
+            Object* temp = new Triangle(v1, v2, v3);
+            temp->setColor(color.r, color.g, color.b);
+            temp->setCoEfficients(ambient, diffuse, specular, reflection);
+            temp->setShine(shine);
+            objects.push_back(temp);
+        }
+        else if (objectType == "general") {
+            // Read general quadratic data
+            double A, B, C, D, E, F, G, H, I, J;
+            Vector3 refPoint;
+            double length, width, height;
+            Color color;
+            double ambient, diffuse, specular, reflection;
+            int shine;
 
-// void printControls() {
-//     std::cout << "\n=== CONTROLS ===" << std::endl;
-//     std::cout << "Camera Movement:" << std::endl;
-//     std::cout << "  Arrow Keys    - Move forward/back/left/right" << std::endl;
-//     std::cout << "  Page Up/Down  - Move up/down" << std::endl;
-//     std::cout << "\nCamera Rotation:" << std::endl;
-//     std::cout << "  1/2           - Look left/right" << std::endl;
-//     std::cout << "  3/4           - Look up/down" << std::endl;
-//     std::cout << "  5/6           - Tilt clockwise/counter-clockwise" << std::endl;
-//     std::cout << "\nCube Controls:" << std::endl;
-//     std::cout << "  W             - Toggle wireframe mode" << std::endl;
-//     std::cout << "  R             - Rotate around Y-axis" << std::endl;
-//     std::cout << "  T             - Rotate around X-axis" << std::endl;
-//     std::cout << "  Y             - Rotate around Z-axis" << std::endl;
-//     std::cout << "  +/-           - Increase/decrease cube size" << std::endl;
-//     std::cout << "\nUtility:" << std::endl;
-//     std::cout << "  C             - Reset camera" << std::endl;
-//     std::cout << "  P             - Print camera status" << std::endl;
-//     std::cout << "  H             - Show this help" << std::endl;
-//     std::cout << "  ESC/Q         - Exit" << std::endl;
-//     std::cout << "================\n" << std::endl;
-// }
+            file >> A >> B >> C >> D >> E >> F >> G >> H >> I >> J;
+            file >> refPoint.x >> refPoint.y >> refPoint.z >> length >> width >> height;
+            file >> color.r >> color.g >> color.b;
+            file >> ambient >> diffuse >> specular >> reflection;
+            file >> shine;
+
+            // Create general quadratic object
+            Object* temp = new GeneralQuadratic(A, B, C, D, E, F, G, H, I, J);
+            temp->setColor(color.r, color.g, color.b);
+            temp->setCoEfficients(ambient, diffuse, specular, reflection);
+            temp->setShine(shine);
+            temp->setReferencePoint(refPoint);
+            temp->setDimensions(height, width, length);
+            objects.push_back(temp);
+        }
+    }
+
+    // Read number of point lights
+    int numPointLights;
+    file >> numPointLights;
+
+    // Read point lights
+    for (int i = 0; i < numPointLights; i++) {
+        Vector3 position;
+        Color lightColor;
+
+        file >> position.x >> position.y >> position.z;
+        file >> lightColor.r >> lightColor.g >> lightColor.b;
+
+        PointLight pl(position, lightColor);
+        pointLights.push_back(pl);
+    }
+
+    // Read number of spot lights
+    int numSpotLights;
+    file >> numSpotLights;
+
+    // Read spot lights
+    for (int i = 0; i < numSpotLights; i++) {
+        Vector3 position;
+        Color lightColor;
+        Vector3 direction;
+        double cutoffAngle;
+
+        file >> position.x >> position.y >> position.z;
+        file >> lightColor.r >> lightColor.g >> lightColor.b;
+        file >> direction.x >> direction.y >> direction.z;
+        file >> cutoffAngle;
+
+        PointLight pl(position, lightColor);
+        SpotLight sl(pl, direction, cutoffAngle);
+        spotLights.push_back(sl);
+    }
+
+    file.close();
+    
+    cout << "Scene loaded successfully!" << endl;
+    cout << "Objects: " << objects.size() << endl;
+    cout << "Point Lights: " << pointLights.size() << endl;
+    cout << "Spot Lights: " << spotLights.size() << endl;
+}
+
+int main() {
+    cout << "Loading scene data..." << endl;
+    loadData();
+    
+    // Your ray tracing implementation will go here
+    
+    return 0;
+}
