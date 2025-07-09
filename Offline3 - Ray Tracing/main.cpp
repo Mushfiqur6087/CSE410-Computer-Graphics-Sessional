@@ -3,10 +3,12 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include <GL/glut.h>
 #include "src/Object/Object.h"
 #include "src/Sphere/Sphere.h"
 #include "src/Triangle/Triangle.h"
 #include "src/GeneralQuadratic/GeneralQuadratic.h"
+#include "src/Floor/Floor.h"
 #include "src/PointLight/PointLight.h"
 #include "src/SpotLight/SpotLight.h"
 #include "src/Vector3/Vector3.h"
@@ -151,17 +153,167 @@ void loadData() {
 
     file.close();
     
+    // Create and add floor
+    Object* floorObj = new Floor(1000, 20);
+    floorObj->setColor(1.0, 1.0, 1.0); // Default white color (will be overridden by checkerboard pattern)
+    floorObj->setCoEfficients(0.4, 0.2, 0.2, 0.2); // ambient, diffuse, specular, reflection
+    floorObj->setShine(10);
+    objects.push_back(floorObj);
+    
     cout << "Scene loaded successfully!" << endl;
-    cout << "Objects: " << objects.size() << endl;
-    cout << "Point Lights: " << pointLights.size() << endl;
-    cout << "Spot Lights: " << spotLights.size() << endl;
+    cout << endl;
+    
+    // Print detailed scene information
+    printSceneDetails();
 }
 
-int main() {
+// Function to print detailed object information
+void printObjectDetails(Object* obj, int index) {
+    cout << "Object " << index << ":" << endl;
+    
+    // Try to determine object type using dynamic_cast
+    if (dynamic_cast<Sphere*>(obj)) {
+        Sphere* sphere = dynamic_cast<Sphere*>(obj);
+        cout << "  Type: Sphere" << endl;
+        cout << "  Center: (" << sphere->getCenter().x << ", " << sphere->getCenter().y << ", " << sphere->getCenter().z << ")" << endl;
+        cout << "  Radius: " << sphere->getRadius() << endl;
+    }
+    else if (dynamic_cast<Triangle*>(obj)) {
+        Triangle* triangle = dynamic_cast<Triangle*>(obj);
+        cout << "  Type: Triangle" << endl;
+        cout << "  Vertex 1: (" << triangle->getVertex1().x << ", " << triangle->getVertex1().y << ", " << triangle->getVertex1().z << ")" << endl;
+        cout << "  Vertex 2: (" << triangle->getVertex2().x << ", " << triangle->getVertex2().y << ", " << triangle->getVertex2().z << ")" << endl;
+        cout << "  Vertex 3: (" << triangle->getVertex3().x << ", " << triangle->getVertex3().y << ", " << triangle->getVertex3().z << ")" << endl;
+    }
+    else if (dynamic_cast<GeneralQuadratic*>(obj)) {
+        GeneralQuadratic* quad = dynamic_cast<GeneralQuadratic*>(obj);
+        cout << "  Type: General Quadratic" << endl;
+        double a, b, c, d, e, f, g, h, i, j;
+        quad->getCoefficients(a, b, c, d, e, f, g, h, i, j);
+        cout << "  Equation: " << a << "x² + " << b << "y² + " << c << "z² + " << d << "xy + " << e << "xz + " << f << "yz + " << g << "x + " << h << "y + " << i << "z + " << j << " = 0" << endl;
+        cout << "  Reference Point: (" << quad->getReferencePoint().x << ", " << quad->getReferencePoint().y << ", " << quad->getReferencePoint().z << ")" << endl;
+    }
+    else if (dynamic_cast<Floor*>(obj)) {
+        Floor* floor = dynamic_cast<Floor*>(obj);
+        cout << "  Type: Checkerboard Floor" << endl;
+        cout << "  Floor Width: " << floor->getFloorWidth() << endl;
+        cout << "  Tile Width: " << floor->getTileWidth() << endl;
+        cout << "  Reference Point: (" << floor->getReferencePoint().x << ", " << floor->getReferencePoint().y << ", " << floor->getReferencePoint().z << ")" << endl;
+    }
+    else {
+        cout << "  Type: Unknown Object" << endl;
+    }
+    
+    // Print common properties
+    cout << "  Color: (" << obj->color.r << ", " << obj->color.g << ", " << obj->color.b << ")" << endl;
+    cout << "  Coefficients - Ambient: " << obj->coEfficients.ambient << ", Diffuse: " << obj->coEfficients.diffuse 
+         << ", Specular: " << obj->coEfficients.specular << ", Reflection: " << obj->coEfficients.reflection << endl;
+    cout << "  Shine: " << obj->shine << endl;
+    cout << endl;
+}
+
+// Function to print detailed point light information
+void printPointLightDetails(const PointLight& light, int index) {
+    cout << "Point Light " << index << ":" << endl;
+    cout << "  Position: (" << light.light_pos.x << ", " << light.light_pos.y << ", " << light.light_pos.z << ")" << endl;
+    cout << "  Color: (" << light.color.r << ", " << light.color.g << ", " << light.color.b << ")" << endl;
+    cout << endl;
+}
+
+// Function to print detailed spot light information
+void printSpotLightDetails(const SpotLight& light, int index) {
+    cout << "Spot Light " << index << ":" << endl;
+    cout << "  Position: (" << light.point_light.light_pos.x << ", " << light.point_light.light_pos.y << ", " << light.point_light.light_pos.z << ")" << endl;
+    cout << "  Color: (" << light.point_light.color.r << ", " << light.point_light.color.g << ", " << light.point_light.color.b << ")" << endl;
+    cout << "  Direction: (" << light.light_direction.x << ", " << light.light_direction.y << ", " << light.light_direction.z << ")" << endl;
+    cout << "  Cutoff Angle: " << light.cutoff_angle << " degrees" << endl;
+    cout << endl;
+}
+
+// Function to print comprehensive scene information
+void printSceneDetails() {
+    cout << "========================================" << endl;
+    cout << "           SCENE DETAILS" << endl;
+    cout << "========================================" << endl;
+    cout << "Recursion Level: " << recursionLevel << endl;
+    cout << "Image Width: " << imageWidth << endl;
+    cout << "Total Objects: " << objects.size() << endl;
+    cout << "Total Point Lights: " << pointLights.size() << endl;
+    cout << "Total Spot Lights: " << spotLights.size() << endl;
+    cout << "========================================" << endl;
+    cout << endl;
+    
+    // Print detailed object information
+    cout << "OBJECTS:" << endl;
+    cout << "--------" << endl;
+    for (int i = 0; i < objects.size(); i++) {
+        printObjectDetails(objects[i], i + 1);
+    }
+    
+    // Print detailed point light information
+    if (!pointLights.empty()) {
+        cout << "POINT LIGHTS:" << endl;
+        cout << "-------------" << endl;
+        for (int i = 0; i < pointLights.size(); i++) {
+            printPointLightDetails(pointLights[i], i + 1);
+        }
+    }
+    
+    // Print detailed spot light information
+    if (!spotLights.empty()) {
+        cout << "SPOT LIGHTS:" << endl;
+        cout << "------------" << endl;
+        for (int i = 0; i < spotLights.size(); i++) {
+            printSpotLightDetails(spotLights[i], i + 1);
+        }
+    }
+    
+    cout << "========================================" << endl;
+}
+
+// Function to draw all objects in the scene
+void drawScene() {
+    // Clear the screen
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
+    // Draw all objects
+    for (Object* obj : objects) {
+        if (obj) {
+            obj->draw();
+        }
+    }
+    
+    // Flush OpenGL commands
+    glFlush();
+}
+
+int main(int argc, char** argv) {
     cout << "Loading scene data..." << endl;
     loadData();
     
-    // Your ray tracing implementation will go here
+    // Initialize GLUT
+    glutInit(&argc, argv);
+    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+    glutInitWindowSize(800, 600);
+    glutCreateWindow("Ray Tracing Scene");
+    
+    // Set up OpenGL state
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    
+    // Main display loop
+    glutDisplayFunc([]() {
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        
+        // Draw the scene
+        drawScene();
+        
+        glutSwapBuffers();
+    });
+    
+    // Enter the GLUT main loop
+    glutMainLoop();
     
     return 0;
 }

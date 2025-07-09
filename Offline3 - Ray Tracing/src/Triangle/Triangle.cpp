@@ -1,5 +1,6 @@
 #include "Triangle.h"
 #include <iostream>
+#include <GL/glut.h>
 
 // Constructor with three vertices
 Triangle::Triangle(Vector3 v1, Vector3 v2, Vector3 v3) {
@@ -25,11 +26,14 @@ Triangle::Triangle() {
 
 // Override the draw method
 void Triangle::draw() {
-    // Write codes for drawing triangle
-    std::cout << "Drawing triangle with vertices:" << std::endl;
-    std::cout << "  V1: (" << vertex1.x << ", " << vertex1.y << ", " << vertex1.z << ")" << std::endl;
-    std::cout << "  V2: (" << vertex2.x << ", " << vertex2.y << ", " << vertex2.z << ")" << std::endl;
-    std::cout << "  V3: (" << vertex3.x << ", " << vertex3.y << ", " << vertex3.z << ")" << std::endl;
+    glBegin(GL_TRIANGLES);
+    {
+        glColor3f(color.r, color.g, color.b);
+        glVertex3f(vertex1.x, vertex1.y, vertex1.z);
+        glVertex3f(vertex2.x, vertex2.y, vertex2.z);
+        glVertex3f(vertex3.x, vertex3.y, vertex3.z);
+    }
+    glEnd();
 }
 
 // Getter methods

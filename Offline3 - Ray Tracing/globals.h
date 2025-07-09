@@ -17,5 +17,10 @@ extern int imageWidth;
 
 // Function declarations
 void loadData();
+void printObjectDetails(Object* obj, int index);
+void printPointLightDetails(const PointLight& light, int index);
+void printSpotLightDetails(const SpotLight& light, int index);
+void printSceneDetails();
+void drawScene();
 
 #endif // GLOBALS_H

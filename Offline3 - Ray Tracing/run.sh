@@ -11,6 +11,7 @@ g++ -Isrc main.cpp \
     src/Sphere/Sphere.cpp \
     src/Triangle/Triangle.cpp \
     src/GeneralQuadratic/GeneralQuadratic.cpp \
+    src/Floor/Floor.cpp \
     src/PointLight/PointLight.cpp \
     src/SpotLight/SpotLight.cpp \
     -o main -lGL -lGLU -lglut

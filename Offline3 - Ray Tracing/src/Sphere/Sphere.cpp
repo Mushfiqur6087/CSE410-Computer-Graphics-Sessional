@@ -1,5 +1,6 @@
 #include "Sphere.h"
 #include <iostream>
+#include <GL/glut.h>
 
 // Constructor with center and radius
 Sphere::Sphere(Vector3 center, double radius) {
@@ -16,10 +17,13 @@ Sphere::Sphere() {
 
 // Override the draw method
 void Sphere::draw() {
-    // Write codes for drawing sphere
-    std::cout << "Drawing sphere with center (" << referencePoint.x 
-              << ", " << referencePoint.y << ", " << referencePoint.z 
-              << ") and radius " << length << std::endl;
+    glPushMatrix();
+    {
+        glColor3f(color.r, color.g, color.b);
+        glTranslatef(referencePoint.x, referencePoint.y, referencePoint.z);
+        glutSolidSphere(length, 200, 200);
+    }
+    glPopMatrix();
 }
 
 // Getter methods

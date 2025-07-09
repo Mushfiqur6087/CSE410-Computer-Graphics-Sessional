@@ -23,11 +23,9 @@ GeneralQuadratic::GeneralQuadratic() {
 
 // Override the draw method
 void GeneralQuadratic::draw() {
-    // Write codes for drawing general quadratic surface
-    std::cout << "Drawing general quadratic surface with equation:" << std::endl;
-    std::cout << A << "x² + " << B << "y² + " << C << "z² + " 
-              << D << "xy + " << E << "xz + " << F << "yz + "
-              << G << "x + " << H << "y + " << I << "z + " << J << " = 0" << std::endl;
+    // General quadratic surfaces are not drawn in OpenGL
+    // They are only rendered in the BMP image file through ray tracing
+    // This method is intentionally left empty as per the requirements
 }
 
 // Set coefficients
