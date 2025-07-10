@@ -97,13 +97,12 @@ void capture() {
             // Set pixel color
             if (nearest != -1) {
                 double color[3];
-                objects[nearest]->intersect(&ray, color, recursionLevel);
+                objects[nearest]->intersect(&ray, color, 1); // Start recursion at level 1
                 
-                // Apply gamma correction (optional, often makes images look better)
-                double gamma = 2.2;
-                color[0] = pow(std::max(0.0, std::min(1.0, color[0])), 1.0/gamma);
-                color[1] = pow(std::max(0.0, std::min(1.0, color[1])), 1.0/gamma);
-                color[2] = pow(std::max(0.0, std::min(1.0, color[2])), 1.0/gamma);
+                // Simple clamping without gamma correction
+                color[0] = std::max(0.0, std::min(1.0, color[0]));
+                color[1] = std::max(0.0, std::min(1.0, color[1]));
+                color[2] = std::max(0.0, std::min(1.0, color[2]));
                 
                 // Convert to [0, 255]
                 int r = (int)(color[0] * 255);
@@ -253,7 +252,7 @@ void loadData() {
     // Create and add floor
     Object* floorObj = new Floor(1000, 20);
     floorObj->setColor(1.0, 1.0, 1.0); // Default white color (will be overridden by checkerboard pattern)
-    floorObj->setCoEfficients(0.4, 0.2, 0.2, 0.2); // ambient, diffuse, specular, reflection
+    floorObj->setCoEfficients(0.2, 0.4, 0.2, 0.3); // ambient, diffuse, specular, reflection (increased reflection)
     floorObj->setShine(10);
     objects.push_back(floorObj);
     

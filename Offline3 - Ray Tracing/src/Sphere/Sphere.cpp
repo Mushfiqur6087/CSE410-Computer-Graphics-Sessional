@@ -189,38 +189,40 @@ double Sphere::intersect(Ray* r, double* color, int level) {
         }
     }
     
-    // Handle recursive reflection
-    if (level < recursionLevel) {
-        // Calculate reflection direction
-        Vector3 viewDir = r->dir;
-        Vector3 reflectionDir = viewDir - normal * (2.0 * normal.dot(viewDir));
-        reflectionDir = reflectionDir.normalized();
-        
-        // Create reflected ray (slightly offset to avoid self-intersection)
-        Vector3 reflectionStart = intersectionPoint + normal * 1e-6;
-        Ray reflectedRay(reflectionStart, reflectionDir);
-        
-        // Find nearest intersecting object for reflected ray
-        double tMinReflected = -1;
-        int nearestReflected = -1;
-        
-        for (int i = 0; i < objects.size(); i++) {
-            double tReflected = objects[i]->intersect(&reflectedRay, nullptr, 0);
-            if (tReflected > 0 && (tMinReflected < 0 || tReflected < tMinReflected)) {
-                tMinReflected = tReflected;
-                nearestReflected = i;
-            }
+    // Handle recursive reflection (following the spec exactly)
+    if (level >= recursionLevel) {
+        return t; // Stop recursion
+    }
+    
+    // Calculate reflection direction
+    Vector3 viewDir = r->dir;
+    Vector3 reflectionDir = viewDir - normal * (2.0 * normal.dot(viewDir));
+    reflectionDir = reflectionDir.normalized();
+    
+    // Create reflected ray (offset slightly forward in the reflection direction)
+    Vector3 reflectionStart = intersectionPoint + reflectionDir * 1e-6;
+    Ray reflectedRay(reflectionStart, reflectionDir);
+    
+    // Find nearest intersecting object for reflected ray
+    double tMinReflected = -1;
+    int nearestReflected = -1;
+    
+    for (int i = 0; i < objects.size(); i++) {
+        double tReflected = objects[i]->intersect(&reflectedRay, nullptr, 0);
+        if (tReflected > 0 && (tMinReflected < 0 || tReflected < tMinReflected)) {
+            tMinReflected = tReflected;
+            nearestReflected = i;
         }
+    }
+    
+    if (nearestReflected != -1) {
+        double colorReflected[3] = {0, 0, 0};
+        objects[nearestReflected]->intersect(&reflectedRay, colorReflected, level + 1);
         
-        if (nearestReflected != -1) {
-            double colorReflected[3];
-            objects[nearestReflected]->intersect(&reflectedRay, colorReflected, level + 1);
-            
-            // Add reflection component to color
-            color[0] += colorReflected[0] * coEfficients.reflection;
-            color[1] += colorReflected[1] * coEfficients.reflection;
-            color[2] += colorReflected[2] * coEfficients.reflection;
-        }
+        // Add reflection component to color
+        color[0] += colorReflected[0] * coEfficients.reflection;
+        color[1] += colorReflected[1] * coEfficients.reflection;
+        color[2] += colorReflected[2] * coEfficients.reflection;
     }
     
     return t;
