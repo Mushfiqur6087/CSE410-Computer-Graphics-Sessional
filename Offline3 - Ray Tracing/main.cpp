@@ -97,12 +97,18 @@ void capture() {
             // Set pixel color
             if (nearest != -1) {
                 double color[3];
-                objects[nearest]->intersect(&ray, color, 1);
+                objects[nearest]->intersect(&ray, color, recursionLevel);
                 
-                // Clamp color values to [0, 1] and convert to [0, 255]
-                int r = (int)(std::max(0.0, std::min(1.0, color[0])) * 255);
-                int g = (int)(std::max(0.0, std::min(1.0, color[1])) * 255);
-                int b = (int)(std::max(0.0, std::min(1.0, color[2])) * 255);
+                // Apply gamma correction (optional, often makes images look better)
+                double gamma = 2.2;
+                color[0] = pow(std::max(0.0, std::min(1.0, color[0])), 1.0/gamma);
+                color[1] = pow(std::max(0.0, std::min(1.0, color[1])), 1.0/gamma);
+                color[2] = pow(std::max(0.0, std::min(1.0, color[2])), 1.0/gamma);
+                
+                // Convert to [0, 255]
+                int r = (int)(color[0] * 255);
+                int g = (int)(color[1] * 255);
+                int b = (int)(color[2] * 255);
                 
                 image.set_pixel(i, j, r, g, b);
             }
