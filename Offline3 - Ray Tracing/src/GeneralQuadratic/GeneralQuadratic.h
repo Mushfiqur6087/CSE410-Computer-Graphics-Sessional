@@ -19,6 +19,15 @@ public:
     // Override the draw method
     void draw() override;
     
+    // Override the intersect method
+    double intersect(Ray* r, double* color, int level) override;
+    
+    // Override the getColorAt method
+    Color getColorAt(const Vector3& point) override;
+    
+    // Override the getNormalAt method
+    Vector3 getNormalAt(const Vector3& point) override;
+    
     // Setter methods
     void setCoefficients(double a, double b, double c, double d, double e, double f,
                         double g, double h, double i, double j);

@@ -14,6 +14,9 @@ public:
     
     // Default constructor
     PointLight();
+    
+    // Draw method to render the point light
+    void draw() const;
 };
 
 #endif // POINTLIGHT_H

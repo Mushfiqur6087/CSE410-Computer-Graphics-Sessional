@@ -8,6 +8,7 @@ g++ -Isrc main.cpp \
     src/Color/Color.cpp \
     src/Coefficients/Coefficients.cpp \
     src/Object/Object.cpp \
+    src/Ray/Ray.cpp \
     src/Sphere/Sphere.cpp \
     src/Triangle/Triangle.cpp \
     src/GeneralQuadratic/GeneralQuadratic.cpp \

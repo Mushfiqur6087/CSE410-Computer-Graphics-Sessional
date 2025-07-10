@@ -1,4 +1,5 @@
 #include "Object.h"
+#include "../Ray/Ray.h"
 
 // Constructor
 Object::Object() {

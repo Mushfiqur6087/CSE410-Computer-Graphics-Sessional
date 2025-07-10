@@ -22,5 +22,6 @@ void printPointLightDetails(const PointLight& light, int index);
 void printSpotLightDetails(const SpotLight& light, int index);
 void printSceneDetails();
 void drawScene();
+void capture();
 
 #endif // GLOBALS_H
