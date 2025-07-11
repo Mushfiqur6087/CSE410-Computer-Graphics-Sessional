@@ -10,7 +10,7 @@ PointLight::PointLight(Vector3 position, Color lightColor) {
 // Default constructor
 PointLight::PointLight() {
     light_pos = Vector3(0, 0, 0);
-    color = Color(1.0, 1.0, 1.0);  // Default white light
+    color = Color(0.0, 0.0, 0.0);  // Default Black light
 }
 
 // Draw method to render the point light as a colored point

@@ -68,18 +68,28 @@ double GeneralQuadratic::intersect(Ray* r, double* color, int level) {
     double t1 = (-b - sqrt_discriminant) / (2.0 * a);
     double t2 = (-b + sqrt_discriminant) / (2.0 * a);
     
-    // Choose the nearest positive intersection
+    // Choose the nearest positive intersection that's within bounds
     double t = -1.0;
-    if (t1 > 0 && t2 > 0) {
-        t = (t1 < t2) ? t1 : t2;
-    } else if (t1 > 0) {
-        t = t1;
-    } else if (t2 > 0) {
-        t = t2;
+    
+    // Check both intersections for clipping bounds
+    if (t1 > 0) {
+        Vector3 point1 = r->start + r->dir * t1;
+        if (isInsideBounds(point1)) {
+            t = t1;
+        }
+    }
+    
+    if (t2 > 0) {
+        Vector3 point2 = r->start + r->dir * t2;
+        if (isInsideBounds(point2)) {
+            if (t < 0 || t2 < t) {
+                t = t2;
+            }
+        }
     }
     
     if (t < 0) {
-        return -1.0; // No valid intersection
+        return -1.0; // No valid intersection within bounds
     }
     
     // If level is 0, just return distance for nearest object detection
@@ -199,40 +209,38 @@ double GeneralQuadratic::intersect(Ray* r, double* color, int level) {
         }
     }
     
-    // Handle recursive reflection (following the spec exactly)
-    if (level >= recursionLevel) {
-        return t; // Stop recursion
-    }
-    
-    // Calculate reflection direction
-    Vector3 viewDir = r->dir;
-    Vector3 reflectionDir = viewDir - normal * (2.0 * normal.dot(viewDir));
-    reflectionDir = reflectionDir.normalized();
-    
-    // Create reflected ray (offset slightly forward in the reflection direction)
-    Vector3 reflectionStart = intersectionPoint + reflectionDir * 1e-6;
-    Ray reflectedRay(reflectionStart, reflectionDir);
-    
-    // Find nearest intersecting object for reflected ray
-    double tMinReflected = -1;
-    int nearestReflected = -1;
-    
-    for (int i = 0; i < objects.size(); i++) {
-        double tReflected = objects[i]->intersect(&reflectedRay, nullptr, 0);
-        if (tReflected > 0 && (tMinReflected < 0 || tReflected < tMinReflected)) {
-            tMinReflected = tReflected;
-            nearestReflected = i;
-        }
-    }
-    
-    if (nearestReflected != -1) {
-        double colorReflected[3] = {0, 0, 0};
-        objects[nearestReflected]->intersect(&reflectedRay, colorReflected, level + 1);
+    // Handle recursive reflection
+    if (level < recursionLevel) {
+        // Calculate reflection direction
+        Vector3 viewDir = r->dir;
+        Vector3 reflectionDir = viewDir - normal * (2.0 * normal.dot(viewDir));
+        reflectionDir = reflectionDir.normalized();
         
-        // Add reflection component to color
-        color[0] += colorReflected[0] * coEfficients.reflection;
-        color[1] += colorReflected[1] * coEfficients.reflection;
-        color[2] += colorReflected[2] * coEfficients.reflection;
+        // Create reflected ray (slightly offset to avoid self-intersection)
+        Vector3 reflectionStart = intersectionPoint + normal * 1e-6;
+        Ray reflectedRay(reflectionStart, reflectionDir);
+        
+        // Find nearest intersecting object for reflected ray
+        double tMinReflected = -1;
+        int nearestReflected = -1;
+        
+        for (int i = 0; i < objects.size(); i++) {
+            double tReflected = objects[i]->intersect(&reflectedRay, nullptr, 0);
+            if (tReflected > 0 && (tMinReflected < 0 || tReflected < tMinReflected)) {
+                tMinReflected = tReflected;
+                nearestReflected = i;
+            }
+        }
+        
+        if (nearestReflected != -1) {
+            double colorReflected[3];
+            objects[nearestReflected]->intersect(&reflectedRay, colorReflected, level + 1);
+            
+            // Add reflection component to color
+            color[0] += colorReflected[0] * coEfficients.reflection;
+            color[1] += colorReflected[1] * coEfficients.reflection;
+            color[2] += colorReflected[2] * coEfficients.reflection;
+        }
     }
     
     return t;
@@ -277,4 +285,28 @@ Vector3 GeneralQuadratic::getGradientAt(const Vector3& point) const {
     double dz = 2*C*z + E*x + F*y + I;
     
     return Vector3(dx, dy, dz);
+}
+
+// Helper function for clipping (essential for torus rendering)
+bool GeneralQuadratic::isInsideBounds(const Vector3& point) const {
+    // If no clipping dimensions are set, return true
+    if (length == 0 && width == 0 && height == 0) {
+        return true;
+    }
+    
+    // Calculate relative position from reference point
+    Vector3 relativePoint = point - referencePoint;
+    
+    // Check bounds for each dimension
+    if (length > 0 && (relativePoint.x < -length/2 || relativePoint.x > length/2)) {
+        return false;
+    }
+    if (width > 0 && (relativePoint.y < -width/2 || relativePoint.y > width/2)) {
+        return false;
+    }
+    if (height > 0 && (relativePoint.z < -height/2 || relativePoint.z > height/2)) {
+        return false;
+    }
+    
+    return true;
 }

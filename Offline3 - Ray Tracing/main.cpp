@@ -31,15 +31,20 @@ vector<PointLight> pointLights;
 vector<SpotLight> spotLights;
 
 // Global variables for scene configuration
-int recursionLevel;
-int imageWidth;
+double epsilon = 1e-6;
+int recursionLevel = 1;  // Default value matching senior's code
+int imageWidth, imageHeight;
+double fovy = 45.0;
+double znear = 1.0;
+double zfar = 700.0;
 
 // Camera object
 Camera camera;
 
-// Window parameters
-double windowWidth = 800;
-double windowHeight = 600;
+// Window parameters (matching senior's naming)
+double window_width = 800;
+double window_height = 600;
+double image_width, image_height;
 double viewAngle = 45.0;
 
 // Image counter for naming output files
@@ -49,7 +54,7 @@ void capture() {
     cout << "Capturing image..." << endl;
     
     // Initialize bitmap image and set background color
-    bitmap_image image(imageWidth, imageWidth); // Square image
+    bitmap_image image(imageWidth, imageHeight);
     image.set_all_channels(0, 0, 0); // Black background
     
     // Get camera vectors
@@ -58,26 +63,25 @@ void capture() {
     Vector3 r = camera.getRightDirection();
     Vector3 u = camera.getUpDirection();
     
-    // Calculate plane distance
-    double planeDistance = (windowHeight / 2.0) / tan((viewAngle * M_PI / 180.0) / 2.0);
+    // Calculate plane distance (matching senior's formula)
+    double planeDistance = (window_height / 2.0) / tan((fovy * M_PI / 180.0) / 2.0);
     
     // Calculate top-left corner of the image plane
-    Vector3 topleft = eye + l * planeDistance - r * (windowWidth / 2.0) + u * (windowHeight / 2.0);
+    Vector3 topleft = eye + l * planeDistance + u * (window_height / 2.0) - r * (window_width / 2.0);
     
-    // Calculate pixel spacing
-    double du = windowWidth / imageWidth;
-    double dv = windowHeight / imageWidth; // Using imageWidth for square image
+    // Calculate pixel spacing (matching senior's approach exactly)
+    double du = window_width / imageWidth;
+    double dv = window_height / imageHeight;
     
-    // Choose middle of the grid cell
-    topleft = topleft + r * (0.5 * du) - u * (0.5 * dv);
+    // Choose middle of the grid cell (matching senior's approach)
+    topleft = topleft + r * (du * 0.5) - u * (dv * 0.5);
     
-    // Ray tracing loop
+    // Ray tracing loop (single sample per pixel to match senior's approach)
     for (int i = 0; i < imageWidth; i++) {
-        for (int j = 0; j < imageWidth; j++) {
-            // Calculate current pixel position
-            Vector3 curPixel = topleft + r * (i * du) + u * (-j * dv);
+        for (int j = 0; j < imageHeight; j++) {
+            Vector3 curPixel = topleft + r * (i * du) - u * (j * dv);
             
-            // Create ray from eye to current pixel
+            // Create ray from eye to current pixel (matching senior's approach)
             Vector3 rayDir = (curPixel - eye).normalized();
             Ray ray(eye, rayDir);
             
@@ -99,19 +103,13 @@ void capture() {
                 double color[3];
                 objects[nearest]->intersect(&ray, color, 1); // Start recursion at level 1
                 
-                // Simple clamping without gamma correction
-                color[0] = std::max(0.0, std::min(1.0, color[0]));
-                color[1] = std::max(0.0, std::min(1.0, color[1]));
-                color[2] = std::max(0.0, std::min(1.0, color[2]));
-                
-                // Convert to [0, 255]
-                int r = (int)(color[0] * 255);
-                int g = (int)(color[1] * 255);
-                int b = (int)(color[2] * 255);
+                // Convert to [0, 255] with proper rounding (matching senior's approach)
+                int r = (int)round(color[0] * 255);
+                int g = (int)round(color[1] * 255);
+                int b = (int)round(color[2] * 255);
                 
                 image.set_pixel(i, j, r, g, b);
             }
-            // If no intersection, pixel remains black (background)
         }
     }
     
@@ -132,6 +130,7 @@ void loadData() {
     // Read recursion level and image width
     file >> recursionLevel;
     file >> imageWidth;
+    imageHeight = imageWidth; // Square image as per senior's code
 
     // Read number of objects
     int numObjects;
@@ -249,10 +248,10 @@ void loadData() {
 
     file.close();
     
-    // Create and add floor
-    Object* floorObj = new Floor(1000, 20);
+    // Create and add floor (matching scene requirements exactly)
+    Object* floorObj = new Floor(1000, 20); // floorWidth = 1000 (500 across each side from origin), tileWidth = 20
     floorObj->setColor(1.0, 1.0, 1.0); // Default white color (will be overridden by checkerboard pattern)
-    floorObj->setCoEfficients(0.2, 0.4, 0.2, 0.3); // ambient, diffuse, specular, reflection (increased reflection)
+    floorObj->setCoEfficients(0.4, 0.2, 0.2, 0.2); // Matching scene coefficients
     floorObj->setShine(10);
     objects.push_back(floorObj);
     
@@ -262,6 +261,7 @@ void loadData() {
 // Function to draw all objects in the scene
 void drawScene() {
     // Clear the screen first
+    glEnable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
     // Reset modelview matrix
@@ -270,44 +270,6 @@ void drawScene() {
     
     // Apply camera transformation
     camera.applyLookAt();
-    
-    // Enable lighting for better visualization
-    glEnable(GL_LIGHTING);
-    glEnable(GL_LIGHT0);
-    glEnable(GL_COLOR_MATERIAL);
-    glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-    
-    // Set up a basic light (using first point light if available)
-    if (!pointLights.empty()) {
-        GLfloat light_position[] = {
-            (float)pointLights[0].light_pos.x, 
-            (float)pointLights[0].light_pos.y, 
-            (float)pointLights[0].light_pos.z, 
-            1.0f
-        };
-        GLfloat light_color[] = {
-            (float)pointLights[0].color.r, 
-            (float)pointLights[0].color.g, 
-            (float)pointLights[0].color.b, 
-            1.0f
-        };
-        
-        glLightfv(GL_LIGHT0, GL_POSITION, light_position);
-        glLightfv(GL_LIGHT0, GL_DIFFUSE, light_color);
-        glLightfv(GL_LIGHT0, GL_SPECULAR, light_color);
-    } else {
-        // Default light if no point lights
-        GLfloat light_position[] = {100.0f, 100.0f, 100.0f, 1.0f};
-        GLfloat light_color[] = {1.0f, 1.0f, 1.0f, 1.0f};
-        
-        glLightfv(GL_LIGHT0, GL_POSITION, light_position);
-        glLightfv(GL_LIGHT0, GL_DIFFUSE, light_color);
-        glLightfv(GL_LIGHT0, GL_SPECULAR, light_color);
-    }
-    
-    // Set ambient light
-    GLfloat ambient[] = {0.2f, 0.2f, 0.2f, 1.0f};
-    glLightModelfv(GL_LIGHT_MODEL_AMBIENT, ambient);
     
     // Debug: Print drawing status
     static bool printed = false;
@@ -324,7 +286,6 @@ void drawScene() {
     }
     
     // Draw all point lights as small spheres
-    glDisable(GL_LIGHTING); // Draw lights without lighting
     for (const PointLight& light : pointLights) {
         glPushMatrix();
         glColor3f(light.color.r, light.color.g, light.color.b);
@@ -332,7 +293,6 @@ void drawScene() {
         glutSolidSphere(2.0, 10, 10); // Small sphere to represent light
         glPopMatrix();
     }
-    glEnable(GL_LIGHTING); // Re-enable lighting
 }
 
 void display() {
@@ -410,10 +370,33 @@ void keyboardHandler(unsigned char key, int x, int y) {
             break;
             
         // Capture image
+        case '0': // PDF specification requires '0' key
+            capture();
+            break;
         case 'c':
         case 'C':
         case ' ': // Space bar
             capture();
+            break;
+            
+        // Number key controls as per PDF specification
+        case '1':
+            camera.lookLeft();
+            break;
+        case '2':
+            camera.lookRight();
+            break;
+        case '3':
+            camera.lookUp();
+            break;
+        case '4':
+            camera.lookDown();
+            break;
+        case '5':
+            camera.tiltClockwise();
+            break;
+        case '6':
+            camera.tiltCounterClockwise();
             break;
     }
     
@@ -449,16 +432,25 @@ void printControls() {
     cout << "\n=== CONTROLS ===" << endl;
     cout << "ESC/Q: Exit" << endl;
     cout << "R: Reset camera" << endl;
-    cout << "C/Space: Capture ray-traced image" << endl;
+    cout << "0: Capture ray-traced image (PDF specification)" << endl;
+    cout << "C/Space: Capture ray-traced image (alternative)" << endl;
     cout << "\nMovement:" << endl;
     cout << "W/S: Move forward/backward" << endl;
     cout << "A/D: Move left/right" << endl;
     cout << "E/X: Move up/down" << endl;
     cout << "Arrow keys: Alternative movement" << endl;
+    cout << "PageUp/PageDown: Move up/down" << endl;
     cout << "\nRotation:" << endl;
     cout << "I/K: Look up/down" << endl;
     cout << "J/L: Look left/right" << endl;
     cout << "U/O: Tilt counter-clockwise/clockwise" << endl;
+    cout << "\nNumber Keys (PDF specification):" << endl;
+    cout << "1: Look left" << endl;
+    cout << "2: Look right" << endl;
+    cout << "3: Look up" << endl;
+    cout << "4: Look down" << endl;
+    cout << "5: Tilt clockwise" << endl;
+    cout << "6: Tilt counter-clockwise" << endl;
     cout << "================" << endl;
 }
 
@@ -466,11 +458,13 @@ int main(int argc, char** argv) {
     cout << "Loading scene data..." << endl;
     loadData();
     
-    // Initialize camera with a good starting position to see the scene
-    camera.setPosition(Vector3(150, 150, 80));
-    camera.setLookAt(Vector3(0, 30, 25), Vector3(0, 0, 1));
-    camera.setMovementSpeed(5.0f);
-    camera.setRotationSpeed(2.0f);
+    // Initialize camera with same position as senior's code
+    camera.setPosition(Vector3(0, 300, 300));
+    // Senior's look direction is (0, -1, -1), so target should be position + look_direction
+    Vector3 lookTarget = Vector3(0, 300, 300) + Vector3(0, -1, -1);
+    camera.setLookAt(lookTarget, Vector3(0, -1, 1));
+    camera.setMovementSpeed(5.0f);    // Matching senior's camera_change = 5
+    camera.setRotationSpeed(10.0f);   // Matching senior's camera_angle_change = 10
     
     cout << "Scene loaded successfully!" << endl;
     printControls();

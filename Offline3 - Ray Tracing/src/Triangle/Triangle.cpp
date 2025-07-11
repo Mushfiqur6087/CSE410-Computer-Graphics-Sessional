@@ -125,16 +125,17 @@ double Triangle::intersect(Ray* r, double* color, int level) {
         
         if (!inShadow) {
             // Calculate Lambert value (diffuse component)
-            Vector3 lightToPoint = (pl.light_pos - intersectionPoint).normalized();
-            double lambertValue = std::max(0.0f, normal.dot(lightToPoint));
+            // Use negative dot product because lightDir points FROM light TO intersection
+            double lambertValue = std::max(0.0, -(double)lightDir.dot(normal));
             
-            // Calculate reflected ray direction
-            Vector3 reflectedRay = lightToPoint - normal * (2.0 * normal.dot(lightToPoint));
-            reflectedRay = reflectedRay.normalized();
+            // Calculate reflected light ray direction (following senior's formula)
+            Vector3 reflectedLightRay = lightDir - normal * (2.0 * lightDir.dot(normal));
+            reflectedLightRay = reflectedLightRay.normalized();
             
             // Calculate Phong value (specular component)
-            Vector3 viewDir = (r->start - intersectionPoint).normalized();
-            double phongValue = std::max(0.0f, viewDir.dot(reflectedRay));
+            // viewDir should be the incoming ray direction (eye to intersection)
+            Vector3 viewDir = r->dir;  // This is already eye-to-intersection direction
+            double phongValue = std::max(0.0, -(double)reflectedLightRay.dot(viewDir));
             phongValue = pow(phongValue, shine);
             
             // Add diffuse component
@@ -177,16 +178,17 @@ double Triangle::intersect(Ray* r, double* color, int level) {
         
         if (!inShadow) {
             // Calculate Lambert value (diffuse component)
-            Vector3 lightToPoint = (sl.point_light.light_pos - intersectionPoint).normalized();
-            double lambertValue = std::max(0.0f, normal.dot(lightToPoint));
+            // Use negative dot product because lightDir points FROM light TO intersection
+            double lambertValue = std::max(0.0, -(double)lightDir.dot(normal));
             
-            // Calculate reflected ray direction
-            Vector3 reflectedRay = lightToPoint - normal * (2.0 * normal.dot(lightToPoint));
-            reflectedRay = reflectedRay.normalized();
+            // Calculate reflected light ray direction (following senior's formula)
+            Vector3 reflectedLightRay = lightDir - normal * (2.0 * lightDir.dot(normal));
+            reflectedLightRay = reflectedLightRay.normalized();
             
             // Calculate Phong value (specular component)
-            Vector3 viewDir = (r->start - intersectionPoint).normalized();
-            double phongValue = std::max(0.0f, viewDir.dot(reflectedRay));
+            // viewDir should be the incoming ray direction (eye to intersection)
+            Vector3 viewDir = r->dir;  // This is already eye-to-intersection direction
+            double phongValue = std::max(0.0, -(double)reflectedLightRay.dot(viewDir));
             phongValue = pow(phongValue, shine);
             
             // Add diffuse component
@@ -207,8 +209,8 @@ double Triangle::intersect(Ray* r, double* color, int level) {
     }
     
     // Calculate reflection direction
-    Vector3 viewDir = r->dir;
-    Vector3 reflectionDir = viewDir - normal * (2.0 * normal.dot(viewDir));
+    Vector3 viewDir = r->dir;  // This is the incoming ray direction (eye to intersection)
+    Vector3 reflectionDir = viewDir - normal * (2.0 * viewDir.dot(normal));
     reflectionDir = reflectionDir.normalized();
     
     // Create reflected ray (offset slightly forward in the reflection direction)
@@ -236,6 +238,14 @@ double Triangle::intersect(Ray* r, double* color, int level) {
         color[1] += colorReflected[1] * coEfficients.reflection;
         color[2] += colorReflected[2] * coEfficients.reflection;
     }
+    
+    // Clamp color values to [0, 1] range (borrowed from senior's approach)
+    color[0] = std::min(1.0, color[0]);
+    color[1] = std::min(1.0, color[1]);
+    color[2] = std::min(1.0, color[2]);
+    color[0] = std::max(0.0, color[0]);
+    color[1] = std::max(0.0, color[1]);
+    color[2] = std::max(0.0, color[2]);
     
     return t;
 }

@@ -128,16 +128,17 @@ double Floor::intersect(Ray* r, double* color, int level) {
         
         if (!inShadow) {
             // Calculate Lambert value (diffuse component)
-            Vector3 lightToPoint = (pl.light_pos - intersectionPoint).normalized();
-            double lambertValue = std::max(0.0f, normal.dot(lightToPoint));
+            // Use negative dot product because lightDir points FROM light TO intersection
+            double lambertValue = std::max(0.0, -(double)lightDir.dot(normal));
             
-            // Calculate reflected ray direction
-            Vector3 reflectedRay = lightToPoint - normal * (2.0 * normal.dot(lightToPoint));
-            reflectedRay = reflectedRay.normalized();
+            // Calculate reflected light ray direction (following senior's formula)
+            Vector3 reflectedLightRay = lightDir - normal * (2.0 * lightDir.dot(normal));
+            reflectedLightRay = reflectedLightRay.normalized();
             
             // Calculate Phong value (specular component)
-            Vector3 viewDir = (r->start - intersectionPoint).normalized();
-            double phongValue = std::max(0.0f, viewDir.dot(reflectedRay));
+            // viewDir should be the incoming ray direction (eye to intersection)
+            Vector3 viewDir = r->dir;  // This is already eye-to-intersection direction
+            double phongValue = std::max(0.0, -(double)reflectedLightRay.dot(viewDir));
             phongValue = pow(phongValue, shine);
             
             // Add diffuse component
@@ -180,16 +181,17 @@ double Floor::intersect(Ray* r, double* color, int level) {
         
         if (!inShadow) {
             // Calculate Lambert value (diffuse component)
-            Vector3 lightToPoint = (sl.point_light.light_pos - intersectionPoint).normalized();
-            double lambertValue = std::max(0.0f, normal.dot(lightToPoint));
+            // Use negative dot product because lightDir points FROM light TO intersection
+            double lambertValue = std::max(0.0, -(double)lightDir.dot(normal));
             
-            // Calculate reflected ray direction
-            Vector3 reflectedRay = lightToPoint - normal * (2.0 * normal.dot(lightToPoint));
-            reflectedRay = reflectedRay.normalized();
+            // Calculate reflected light ray direction (following senior's formula)
+            Vector3 reflectedLightRay = lightDir - normal * (2.0 * lightDir.dot(normal));
+            reflectedLightRay = reflectedLightRay.normalized();
             
             // Calculate Phong value (specular component)
-            Vector3 viewDir = (r->start - intersectionPoint).normalized();
-            double phongValue = std::max(0.0f, viewDir.dot(reflectedRay));
+            // viewDir should be the incoming ray direction (eye to intersection)
+            Vector3 viewDir = r->dir;  // This is already eye-to-intersection direction
+            double phongValue = std::max(0.0, -(double)reflectedLightRay.dot(viewDir));
             phongValue = pow(phongValue, shine);
             
             // Add diffuse component
@@ -210,8 +212,8 @@ double Floor::intersect(Ray* r, double* color, int level) {
     }
     
     // Calculate reflection direction
-    Vector3 viewDir = r->dir;
-    Vector3 reflectionDir = viewDir - normal * (2.0 * normal.dot(viewDir));
+    Vector3 viewDir = r->dir;  // This is the incoming ray direction (eye to intersection)
+    Vector3 reflectionDir = viewDir - normal * (2.0 * viewDir.dot(normal));
     reflectionDir = reflectionDir.normalized();
     
     // Create reflected ray (offset slightly forward in the reflection direction)
@@ -239,6 +241,14 @@ double Floor::intersect(Ray* r, double* color, int level) {
         color[1] += colorReflected[1] * coEfficients.reflection;
         color[2] += colorReflected[2] * coEfficients.reflection;
     }
+    
+    // Clamp color values to [0, 1] range (borrowed from senior's approach)
+    color[0] = std::min(1.0, color[0]);
+    color[1] = std::min(1.0, color[1]);
+    color[2] = std::min(1.0, color[2]);
+    color[0] = std::max(0.0, color[0]);
+    color[1] = std::max(0.0, color[1]);
+    color[2] = std::max(0.0, color[2]);
     
     return t;
 }
@@ -277,8 +287,17 @@ void Floor::setTileWidth(double width) {
 // Utility method to determine if a tile should be white (true) or black (false)
 bool Floor::isWhiteTile(double x, double y) const {
     // Convert world coordinates to tile indices
-    int tileX = static_cast<int>(floor((x - referencePoint.x) / tileWidth));
-    int tileY = static_cast<int>(floor((y - referencePoint.y) / tileWidth));
+    // Add floorWidth/2 to shift origin to corner, then divide by tileWidth
+    double adjustedX = x + floorWidth / 2.0;
+    double adjustedY = y + floorWidth / 2.0;
+    
+    int tileX = (int)floor(adjustedX / tileWidth);
+    int tileY = (int)floor(adjustedY / tileWidth);
+    
+    // Ensure we're within bounds
+    if (adjustedX < 0 || adjustedX >= floorWidth || adjustedY < 0 || adjustedY >= floorWidth) {
+        return false; // Black for out of bounds
+    }
     
     // Checkerboard pattern: white if sum of indices is even, black if odd
     return (tileX + tileY) % 2 == 0;
@@ -286,9 +305,22 @@ bool Floor::isWhiteTile(double x, double y) const {
 
 // Get the color of a tile at given coordinates
 Color Floor::getTileColor(double x, double y) const {
-    if (isWhiteTile(x, y)) {
-        return Color(1.0, 1.0, 1.0); // White tile
+    // Convert world coordinates to tile indices
+    // Add floorWidth/2 to shift origin to corner, then divide by tileWidth
+    double adjustedX = x + floorWidth / 2.0;
+    double adjustedY = y + floorWidth / 2.0;
+    
+    int tileX = (int)floor(adjustedX / tileWidth);
+    int tileY = (int)floor(adjustedY / tileWidth);
+    
+    // Ensure we're within bounds
+    if (adjustedX < 0 || adjustedX >= floorWidth || adjustedY < 0 || adjustedY >= floorWidth) {
+        return tile_color2; // Black for out of bounds
+    }
+    
+    if ((tileX + tileY) % 2 == 0) {
+        return tile_color1; // White tile
     } else {
-        return Color(0.0, 0.0, 0.0); // Black tile
+        return tile_color2; // Black tile
     }
 }

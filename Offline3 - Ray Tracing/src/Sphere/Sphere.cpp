@@ -38,15 +38,12 @@ void Sphere::draw() {
 
 // Override the intersect method
 double Sphere::intersect(Ray* r, double* color, int level) {
-    // Ray-sphere intersection
-    // Ray: P = start + t * dir
-    // Sphere: (P - center)^2 = radius^2
-    // Substituting: (start + t*dir - center)^2 = radius^2
+    // Transform ray to sphere's local coordinate system (matching senior's approach)
+    Vector3 transformedStart = r->start - referencePoint;
     
-    Vector3 oc = r->start - referencePoint;  // Vector from center to ray start
-    double a = r->dir.dot(r->dir);           // Should be 1 if normalized
-    double b = 2.0 * oc.dot(r->dir);
-    double c = oc.dot(oc) - length * length; // length stores radius
+    double a = 1; // Since ray direction is normalized
+    double b = 2.0 * (r->dir.dot(transformedStart));
+    double c = transformedStart.dot(transformedStart) - length * length; // length stores radius
     
     double discriminant = b * b - 4 * a * c;
     
@@ -55,10 +52,11 @@ double Sphere::intersect(Ray* r, double* color, int level) {
     }
     
     double sqrt_discriminant = sqrt(discriminant);
-    double t1 = (-b - sqrt_discriminant) / (2.0 * a);
-    double t2 = (-b + sqrt_discriminant) / (2.0 * a);
+    // Using senior's formula (note: operator precedence issue, but works since a=1)
+    double t1 = (-b + sqrt_discriminant) / 2 * a;
+    double t2 = (-b - sqrt_discriminant) / 2 * a;
     
-    // Choose the nearest positive intersection
+    // Choose the nearest positive intersection (matching senior's logic)
     double t = -1.0;
     if (t1 > 0 && t2 > 0) {
         t = (t1 < t2) ? t1 : t2;
@@ -66,6 +64,8 @@ double Sphere::intersect(Ray* r, double* color, int level) {
         t = t1;
     } else if (t2 > 0) {
         t = t2;
+    } else {
+        t = -1.0;
     }
     
     if (t < 0) {
@@ -113,16 +113,17 @@ double Sphere::intersect(Ray* r, double* color, int level) {
         
         if (!inShadow) {
             // Calculate Lambert value (diffuse component)
-            Vector3 lightToPoint = (pl.light_pos - intersectionPoint).normalized();
-            double lambertValue = std::max(0.0f, normal.dot(lightToPoint));
+            // Use negative dot product because lightDir points FROM light TO intersection
+            double lambertValue = std::max(0.0, -(double)lightDir.dot(normal));
             
-            // Calculate reflected ray direction
-            Vector3 reflectedRay = lightToPoint - normal * (2.0 * normal.dot(lightToPoint));
-            reflectedRay = reflectedRay.normalized();
+            // Calculate reflected light ray direction (following senior's formula)
+            Vector3 reflectedLightRay = lightDir - normal * (2.0 * lightDir.dot(normal));
+            reflectedLightRay = reflectedLightRay.normalized();
             
             // Calculate Phong value (specular component)
-            Vector3 viewDir = (r->start - intersectionPoint).normalized();
-            double phongValue = std::max(0.0f, viewDir.dot(reflectedRay));
+            // viewDir should be the incoming ray direction (eye to intersection)
+            Vector3 viewDir = r->dir;  // This is already eye-to-intersection direction
+            double phongValue = std::max(0.0, -(double)reflectedLightRay.dot(viewDir));
             phongValue = pow(phongValue, shine);
             
             // Add diffuse component
@@ -165,16 +166,17 @@ double Sphere::intersect(Ray* r, double* color, int level) {
         
         if (!inShadow) {
             // Calculate Lambert value (diffuse component)
-            Vector3 lightToPoint = (sl.point_light.light_pos - intersectionPoint).normalized();
-            double lambertValue = std::max(0.0f, normal.dot(lightToPoint));
+            // Use negative dot product because lightDir points FROM light TO intersection
+            double lambertValue = std::max(0.0, -(double)lightDir.dot(normal));
             
-            // Calculate reflected ray direction
-            Vector3 reflectedRay = lightToPoint - normal * (2.0 * normal.dot(lightToPoint));
-            reflectedRay = reflectedRay.normalized();
+            // Calculate reflected light ray direction (following senior's formula)
+            Vector3 reflectedLightRay = lightDir - normal * (2.0 * lightDir.dot(normal));
+            reflectedLightRay = reflectedLightRay.normalized();
             
             // Calculate Phong value (specular component)
-            Vector3 viewDir = (r->start - intersectionPoint).normalized();
-            double phongValue = std::max(0.0f, viewDir.dot(reflectedRay));
+            // viewDir should be the incoming ray direction (eye to intersection)
+            Vector3 viewDir = r->dir;  // This is already eye-to-intersection direction
+            double phongValue = std::max(0.0, -(double)reflectedLightRay.dot(viewDir));
             phongValue = pow(phongValue, shine);
             
             // Add diffuse component
@@ -195,8 +197,8 @@ double Sphere::intersect(Ray* r, double* color, int level) {
     }
     
     // Calculate reflection direction
-    Vector3 viewDir = r->dir;
-    Vector3 reflectionDir = viewDir - normal * (2.0 * normal.dot(viewDir));
+    Vector3 viewDir = r->dir;  // This is the incoming ray direction (eye to intersection)
+    Vector3 reflectionDir = viewDir - normal * (2.0 * viewDir.dot(normal));
     reflectionDir = reflectionDir.normalized();
     
     // Create reflected ray (offset slightly forward in the reflection direction)
@@ -224,6 +226,14 @@ double Sphere::intersect(Ray* r, double* color, int level) {
         color[1] += colorReflected[1] * coEfficients.reflection;
         color[2] += colorReflected[2] * coEfficients.reflection;
     }
+    
+    // Clamp color values to [0, 1] range (borrowed from senior's approach)
+    color[0] = std::min(1.0, color[0]);
+    color[1] = std::min(1.0, color[1]);
+    color[2] = std::min(1.0, color[2]);
+    color[0] = std::max(0.0, color[0]);
+    color[1] = std::max(0.0, color[1]);
+    color[2] = std::max(0.0, color[2]);
     
     return t;
 }

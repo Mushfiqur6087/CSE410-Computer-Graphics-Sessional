@@ -39,6 +39,9 @@ public:
     // Utility methods
     double evaluateAt(const Vector3& point) const;
     Vector3 getGradientAt(const Vector3& point) const;
+    
+    // Helper function for improved clipping (borrowed from senior's approach)
+    bool isInsideBounds(const Vector3& point) const;
 };
 
 #endif // GENERALQUADRATIC_H
