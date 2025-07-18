@@ -17,8 +17,8 @@ struct Config {
     static constexpr double DEFAULT_FOVY = 45.0;
     static constexpr double DEFAULT_ZNEAR = 1.0;
     static constexpr double DEFAULT_ZFAR = 700.0;
-    static constexpr double CAMERA_MOVEMENT_SPEED = 5.0;
-    static constexpr double CAMERA_ROTATION_SPEED = 10.0;
+    static constexpr double CAMERA_MOVEMENT_SPEED = 1.0;
+    static constexpr double CAMERA_ROTATION_SPEED = 2.0;
     static constexpr int DEFAULT_WINDOW_POS_X = 100;
     static constexpr int DEFAULT_WINDOW_POS_Y = 100;
 };
@@ -482,7 +482,7 @@ void initializeSystem(const string& inputFilePath, const string& outputDirectory
 void setupGraphics(int argc, char** argv) {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
-    glutInitWindowSize(windowWidth, windowHeight);
+    glutInitWindowSize(768, 768);
     glutInitWindowPosition(windowPositionX, windowPositionY);
     glutCreateWindow("Ray Tracing");
     
